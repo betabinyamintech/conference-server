@@ -1,0 +1,21 @@
+require ("dotenv").config()
+const express=require('express')
+const mongoose=require('mongoose')
+const jwt=require('jsonwebtoken')
+const app=express()
+const cors=require('cors')
+app.use(cors())
+app.use(express.json())
+
+mongoose.connect(process.env.DATABASE_CONNECTION)
+    .then(() => {
+        console.log("mongo is connected")
+    })
+    .catch((err) => {
+        console.log("mongo connection error: " + err)
+    })
+
+const port = process.env.PORT
+const server = app.listen(port, () => {
+    console.log("server is listening at port ", port)
+})
