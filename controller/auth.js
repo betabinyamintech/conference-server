@@ -4,19 +4,31 @@ const User = require('../model/user')
 const jwt = require('jsonwebtoken')
 
 
+const verifyToken = async (req, res, next) => {
+    console.log('verify token', req.headers)
+
+    const token = req.headers.authorization
+    const decoded = jwt.verify(token, process.env.SECRET)
+    const user = await User.findOne({ email: decoded.email }).exec()
+    // hide the password
+    delete user.password
+    req.user = user
+    console.log('authorization user', req.user)
+    next()
+}
+
 router.post('/register', async (req, res) => {
     try {
-        console.log(req.body)
+        console.log({ body: req.body })
         const { email, password } = req.body
 
         if (email == null || password == null) {
-            console.log("error")
-            res.status(400).send("Missing data")
+            res.status(400).send("email or password missing")
             return res;
         }
-        if (password.length < 6 || email.length < 6 || email.indexOf('@') == -1 || email.indexOf('.') == -1) {
-            console.log("error")
-            res.status(400).send("Password is less than 8 characters")
+        const minChars = 3
+        if (password.length < minChars) {
+            res.status(400).send(`Password is less than ${minChars} characters`)
             return res;
         }
 
@@ -54,6 +66,10 @@ router.post('/login', async (req, res) => {
         console.log("Error: ", error)
         res.status(500).send(error)
     }
+})
+
+router.get('/user', verifyToken, async (req, res) => {
+    res.json(req.user)
 })
 
 module.exports = router
