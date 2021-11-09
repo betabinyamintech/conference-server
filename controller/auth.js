@@ -2,6 +2,7 @@ var express = require('express')
 var router = express.Router()
 const User = require('../model/user')
 const jwt = require('jsonwebtoken')
+const Room = require('../model/room')
 
 
 const verifyToken = async (req, res, next) => {
@@ -74,6 +75,32 @@ router.post('/login', async (req, res) => {
 
 router.get('/user', verifyToken, async (req, res) => {
     res.json(req.user)
+})
+
+router.get('/', verifyToken, async (req, res) => {
+    return res.json(req.user)
+})
+
+router.post('/bookingRequestToServer', async (req, res) => {
+    const { date, fromTime, toTime, numberOfParticipants } = req.body
+    console.log("date: ", date, "fromTime: ", fromTime, "toTime", toTime,
+        "numberOfParticipants", numberOfParticipants)
+
+    try {
+        const findRoom = await Room.find({}).exec()
+        if (!findRoom) {
+            res.status(400).send("Somthing wrong...")
+            return; 
+        }
+        roomMatchPeople=findRoom.filter((room)=>(room.maxOfPeople>=numberOfParticipants))
+
+        console.log("after filter:", roomMatchPeople)
+        return roomMatchPeople
+
+    } catch (error) {
+        console.log("Error: ", error)
+        res.status(500).send(error)
+    }
 })
 
 module.exports = router

@@ -6,7 +6,7 @@ const roomSchema=new Schema({
         type:String,
         require:true
     } ,
-    Value:{
+    value:{
         type:Number,
         require:true
     },
