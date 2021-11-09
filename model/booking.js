@@ -2,13 +2,17 @@ const mongoose=require('mongoose')
 const {Schema}= mongoose
 
 const bookingSchema=new Schema({
-    date:{
+    meetingDate:{
         type:Date,
         require:true
     } ,
-    Time:{
+    startTime:{
         type:Date,
         require:true
+    },
+    endTime:{
+        type:Date,
+        require:true  
     },
     roomId:{
         type:mongoose.Types.ObjectId,
@@ -17,6 +21,14 @@ const bookingSchema=new Schema({
     owner:{
         type:mongoose.Types.ObjectId,
         ref:'user'
+    },
+    logDate:{
+        type:Date,
+        require:true
+    },
+    PayMethod:{
+        type:mongoose.Types.ObjectId,
+        ref:'payMethod'
     }
 })    
 module.exports=mongoose.model('booking',bookingSchema)

@@ -18,8 +18,13 @@ const userSchema = new Schema({
         type: String,
         require: true
     },
-    tokenBlance: {
-        type: Number
+    isAdmin: {
+        type: Boolean
     },
+    registerDate: {
+        type: Date
+    },
+
+
 })
 module.exports = mongoose.model('user', userSchema)
