@@ -3,7 +3,7 @@ const booking = require('../model/booking')
 const { create } = require('../model/booking')
 var router = express.Router()
 
-router.post('/requestRoom', async (req, res) => {
+router.post('/bookingRequestToServer', async (req, res) => {
     const { date, fromTime, toTime, numberOfParticipants } = req.body
     const newBooking = await booking.create(req.body)
         .then(res.send("booking created"))
