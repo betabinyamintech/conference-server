@@ -3,6 +3,7 @@ var router = express.Router()
 const User = require('../model/user')
 const jwt = require('jsonwebtoken')
 const Room = require('../model/room')
+const Booking = require('../model/booking')
 
 
 const verifyToken = async (req, res, next) => {
@@ -90,12 +91,40 @@ router.post('/bookingRequestToServer', async (req, res) => {
         const findRoom = await Room.find({}).exec()
         if (!findRoom) {
             res.status(400).send("Somthing wrong...")
-            return; 
+            return;
         }
-        roomMatchPeople=findRoom.filter((room)=>(room.maxOfPeople>=numberOfParticipants))
-
-        console.log("after filter:", roomMatchPeople)
-        return roomMatchPeople
+        roomMatchPeople = findRoom.filter((room) => (room.maxOfPeople >= numberOfParticipants))
+        console.log("findRoom", roomMatchPeople)
+        roomMatchPeople.sort((a, b) => (a.maxOfPeople < b.maxOfPeople && a.value < b.value ? -1 : 1))
+        let allBooking = [];
+        let matchingRoom = "";
+        for (i = 0; i < roomMatchPeople.length; i++) {
+            matchingRoom = roomMatchPeople[i]
+            // && {meetingDate:date}
+            allBooking = await Booking.find({ roomId: matchingRoom._id })
+            const sameTimeBooking = allBooking.filter((booking) =>
+                (booking.endTime > fromTime && booking.startTime < toTime))
+            if (!sameTimeBooking) {
+                break;
+            }
+        }
+        if (i < roomMatchPeople.length)
+            return matchingRoom;
+        else {
+            // roomMatchPeople=roomMatchPeople.filter((room)=>roomMatchPeople[0].value==room.value)
+            // allOptions=[]
+            // for (i = 0; i < roomMatchPeople.length; i++) {
+            //     matchingRoom = roomMatchPeople[i]
+            //     // && {meetingDate:date}
+            //     allBooking = await Booking.find({ roomId: matchingRoom._id })
+            //     const sameTimeBooking = allBooking.filter((booking) =>
+            //         (booking.endTime > fromTime && booking.startTime < toTime))
+            //     if (!sameTimeBooking) {
+            //         // allOptions.push(matchingRoom)
+            //         break;
+            //     }
+            // }
+        }
 
     } catch (error) {
         console.log("Error: ", error)
