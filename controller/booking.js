@@ -4,7 +4,8 @@ const booking = require('../model/booking')
 const { create } = require('../model/booking')
 const Room = require('../model/room')
 
-router.post('/bookingcommitRequestr', async (req, res) => {
+router.post('/bookingcommitRequest', async (req, res) => {
+    console.log("I am in the server")
     const { date, fromTime, toTime, numberOfParticipants } = req.body
     const newBooking = await booking.create(req.body)
         .then(res.send("booking created"))
