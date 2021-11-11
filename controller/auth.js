@@ -3,23 +3,7 @@ var router = express.Router()
 const User = require('../model/user')
 const jwt = require('jsonwebtoken')
 const Room = require('../model/room')
-const booking = require('../model/booking')
-const room = require('../model/room')
-
-
-
-router.post('/bookingcommitRequest', async (req, res) => {
-    const meetingDate = req.body.myDate
-    const startTime = req.body.startTime
-    const endTime = req.body.endTime
-    try {
-        const newBooking = await booking.create({ meetingDate, startTime, endTime })
-        res.send("booking created")
-    }
-    catch (err) {
-        res.status().send(" an error was  found while creating the booking", err)
-    }
-})
+const Booking = require('../model/booking')
 
 
 const verifyToken = async (req, res, next) => {
@@ -110,14 +94,70 @@ router.post('/bookingRequestToServer', async (req, res) => {
             return;
         }
         roomMatchPeople = findRoom.filter((room) => (room.maxOfPeople >= numberOfParticipants))
-
-        console.log("after filter:", roomMatchPeople)
-        return roomMatchPeople
+        console.log("findRoom", roomMatchPeople)
+        roomMatchPeople.sort((a, b) => (a.maxOfPeople < b.maxOfPeople && a.value < b.value ? -1 : 1))
+        let allBooking = [];
+        let matchingRoom = "";
+        for (i = 0; i < roomMatchPeople.length; i++) {
+            matchingRoom = roomMatchPeople[i]
+            // && {meetingDate:date}
+            allBooking = await Booking.find({ roomId: matchingRoom._id })
+            const sameTimeBooking = allBooking.filter((booking) =>
+                (booking.endTime > fromTime && booking.startTime < toTime))
+            if (!sameTimeBooking) {
+                break;
+            }
+        }
+        if (i < roomMatchPeople.length)
+            return matchingRoom;
+        else {
+            // roomMatchPeople=roomMatchPeople.filter((room)=>roomMatchPeople[0].value==room.value)
+            // allOptions=[]
+            // for (i = 0; i < roomMatchPeople.length; i++) {
+            //     matchingRoom = roomMatchPeople[i]
+            //     // && {meetingDate:date}
+            //     allBooking = await Booking.find({ roomId: matchingRoom._id })
+            //     const sameTimeBooking = allBooking.filter((booking) =>
+            //         (booking.endTime > fromTime && booking.startTime < toTime))
+            //     if (!sameTimeBooking) {
+            //         // allOptions.push(matchingRoom)
+            //         break;
+            //     }
+            // }
+        }
 
     } catch (error) {
         console.log("Error: ", error)
         res.status(500).send(error)
     }
 })
+
+
+
+// function getAvailableBookings({date, fromHour, fromMinutesto, participants}) {
+//     const bookings = Book.find(
+//         {
+//             date, 
+//             from: {
+//                 $gte: (fromHour -2) * 60 + fromMinute,
+//                 $lt: (fromHou)
+//         from, to)
+//     const rooms = Rooms.find({ maxOfPeople: { $gte : participants }})
+
+
+//     const exact = null
+//     do {
+//         bookings.filter({})
+        
+//     } while(!exact)
+
+// }
+
+// function book(date, fromHour, fromMinute, toHour, toMinute) {
+//     await Book.create( {
+//         from: fromHour* 60 + fromMinute,
+//         to: toHour * 60 + toMinute
+//     })
+// }
 
 module.exports = router
