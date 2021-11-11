@@ -3,8 +3,8 @@ const {Schema}= mongoose
 
 const bookingSchema=new Schema({
     meetingDate:{
-        type:Date,
-        require:true
+        type:String,
+        // require:true
     } ,
     startTime:{
         type:Number,
@@ -23,12 +23,12 @@ const bookingSchema=new Schema({
         ref:'user'
     },
     logDate:{
-        type:Date,
-        require:true
+        type:String,
+        // require:true
     },
     PayMethod:{
         type:mongoose.Types.ObjectId,
         ref:'payMethod'
     }
-})    
+}) 
 module.exports=mongoose.model('booking',bookingSchema)
