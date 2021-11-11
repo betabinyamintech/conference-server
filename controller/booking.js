@@ -15,7 +15,7 @@ router.post('/bookingcommitRequest', async (req, res) => {
 
 })
 
-router.post('/bookingRequestToServer', async (req, res) => {
+router.post('/getAvailableBookings', async (req, res) => {
     console.log("vdfv")
     const { date, fromTime, toTime, numberOfParticipants } = req.body
     

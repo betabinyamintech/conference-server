@@ -7,11 +7,11 @@ const bookingSchema=new Schema({
         require:true
     } ,
     startTime:{
-        type:Date,
+        type:Number,
         require:true
     },
     endTime:{
-        type:Date,
+        type:Number,
         require:true  
     },
     roomId:{

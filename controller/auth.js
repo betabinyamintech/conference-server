@@ -4,6 +4,9 @@ const User = require('../model/user')
 const jwt = require('jsonwebtoken')
 const Room = require('../model/room')
 const Booking = require('../model/booking')
+var moment = require('moment'); // require
+
+
 
 
 const verifyToken = async (req, res, next) => {
@@ -82,49 +85,72 @@ router.get('/', verifyToken, async (req, res) => {
     return res.json(req.user)
 })
 
-router.post('/bookingRequestToServer', async (req, res) => {
-    const { date, fromTime, toTime, numberOfParticipants } = req.body
+router.post('/getAvailableBookings', async (req, res) => {
+    const { date, fromTime, toTime, numberOfParticipants } = req.body.fieldsValue
     console.log("date: ", date, "fromTime: ", fromTime, "toTime", toTime,
         "numberOfParticipants", numberOfParticipants)
-
+    let reqFromTime = moment(fromTime).get('hour') * 60 + moment(fromTime).get('minutes')
+    let reqToTime = moment(toTime).format("hh") * 60 + moment(toTime).get('minutes')
     try {
-        const findRoom = await Room.find({}).exec()
-        if (!findRoom) {
-            res.status(400).send("Somthing wrong...")
+        let sameTimeBooking = []
+        let i = 0
+        const rooms = await Room.find({ maxOfPeople: { $gte: numberOfParticipants } }).exec()
+        rooms.sort((a, b) => (a.maxOfPeople < b.maxOfPeople ? -1 : 1))
+
+        const bookingsFunc = async () => {
+            return await Booking.find(
+                { date: date },
+                function (roomId) {
+                    rooms.includes({ roomId })
+                }
+            ).clone().catch(function (err) { console.log(err) })
+        }
+        const bookings = await bookingsFunc()
+        do {
+            sameTimeBooking = bookings.filter((booking) =>
+            (booking.endTime > reqFromTime && booking.startTime < reqToTime
+                && rooms[i] == booking._ID))
+            i++
+
+        } while (sameTimeBooking.length != 0 && i < rooms.length)
+        if (sameTimeBooking.length == 0) {
+            console.log("bookingsvvvvvvvvvvvv", rooms[i - 1])
+            return res.json(rooms[i - 1]) ;
+        }
+
+        //אם לא מצאנו חדר מתאים פנוי
+        let options = []
+        let numOfTrys = 1
+        let optionFromTime = reqFromTime
+        let optionToTime = reqToTime
+        while (options.length < 3 && numOfTrys <= 16) {
+            console.log("numOfTrys++", numOfTrys)
+            console.log("options.length", options.length)
+            if (numOfTrys % 2 == 0) {
+                optionFromTime = optionFromTime + 15 * numOfTrys
+                optionToTime = optionToTime + 15 * numOfTrys
+            }
+            else {
+                optionFromTime = optionFromTime - 15 * numOfTrys
+                optionToTime = optionToTime - 15 * numOfTrys
+            }
+            for (i = 0; i < rooms.length; i++) {
+                sameTimeBooking = bookings.filter((booking) =>
+                (booking.endTime > optionFromTime && booking.startTime < optionToTime
+                    && rooms[i] == booking._ID))
+                if (!sameTimeBooking) {
+                    let roomFound = rooms[i]
+                    options.push({ optionFromTime, optionToTime, date, roomFound })
+                }
+            }
+            numOfTrys++
+        }
+        if (options.length == 0) {
+            console.log("options[]")
+            res.status(400).send("no alternatives options")
             return;
         }
-        roomMatchPeople = findRoom.filter((room) => (room.maxOfPeople >= numberOfParticipants))
-        console.log("findRoom", roomMatchPeople)
-        roomMatchPeople.sort((a, b) => (a.maxOfPeople < b.maxOfPeople && a.value < b.value ? -1 : 1))
-        let allBooking = [];
-        let matchingRoom = "";
-        for (i = 0; i < roomMatchPeople.length; i++) {
-            matchingRoom = roomMatchPeople[i]
-            // && {meetingDate:date}
-            allBooking = await Booking.find({ roomId: matchingRoom._id })
-            const sameTimeBooking = allBooking.filter((booking) =>
-                (booking.endTime > fromTime && booking.startTime < toTime))
-            if (!sameTimeBooking) {
-                break;
-            }
-        }
-        if (i < roomMatchPeople.length)
-            return matchingRoom;
-        else {
-            // roomMatchPeople=roomMatchPeople.filter((room)=>roomMatchPeople[0].value==room.value)
-            // allOptions=[]
-            // for (i = 0; i < roomMatchPeople.length; i++) {
-            //     matchingRoom = roomMatchPeople[i]
-            //     // && {meetingDate:date}
-            //     allBooking = await Booking.find({ roomId: matchingRoom._id })
-            //     const sameTimeBooking = allBooking.filter((booking) =>
-            //         (booking.endTime > fromTime && booking.startTime < toTime))
-            //     if (!sameTimeBooking) {
-            //         // allOptions.push(matchingRoom)
-            //         break;
-            //     }
-            // }
-        }
+        return options;
 
     } catch (error) {
         console.log("Error: ", error)
@@ -132,32 +158,5 @@ router.post('/bookingRequestToServer', async (req, res) => {
     }
 })
 
-
-
-// function getAvailableBookings({date, fromHour, fromMinutesto, participants}) {
-//     const bookings = Book.find(
-//         {
-//             date, 
-//             from: {
-//                 $gte: (fromHour -2) * 60 + fromMinute,
-//                 $lt: (fromHou)
-//         from, to)
-//     const rooms = Rooms.find({ maxOfPeople: { $gte : participants }})
-
-
-//     const exact = null
-//     do {
-//         bookings.filter({})
-        
-//     } while(!exact)
-
-// }
-
-// function book(date, fromHour, fromMinute, toHour, toMinute) {
-//     await Book.create( {
-//         from: fromHour* 60 + fromMinute,
-//         to: toHour * 60 + toMinute
-//     })
-// }
 
 module.exports = router
