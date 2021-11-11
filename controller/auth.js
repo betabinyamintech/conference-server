@@ -132,4 +132,32 @@ router.post('/bookingRequestToServer', async (req, res) => {
     }
 })
 
+
+
+// function getAvailableBookings({date, fromHour, fromMinutesto, participants}) {
+//     const bookings = Book.find(
+//         {
+//             date, 
+//             from: {
+//                 $gte: (fromHour -2) * 60 + fromMinute,
+//                 $lt: (fromHou)
+//         from, to)
+//     const rooms = Rooms.find({ maxOfPeople: { $gte : participants }})
+
+
+//     const exact = null
+//     do {
+//         bookings.filter({})
+        
+//     } while(!exact)
+
+// }
+
+// function book(date, fromHour, fromMinute, toHour, toMinute) {
+//     await Book.create( {
+//         from: fromHour* 60 + fromMinute,
+//         to: toHour * 60 + toMinute
+//     })
+// }
+
 module.exports = router
