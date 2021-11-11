@@ -8,6 +8,7 @@ app.use(express.json())
 
 
 app.use('/auth', require('./controller/auth'))
+// app.use('/booking', require('./controller/booking'))
 
 mongoose.connect(process.env.DATABASE_CONNECTION)
     .then(() => {
