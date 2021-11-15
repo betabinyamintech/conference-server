@@ -5,13 +5,13 @@ const jwt = require('jsonwebtoken')
 const Room = require('../model/room')
 const Booking = require('../model/booking')
 var moment = require('moment'); // require
+const { $where } = require('../model/user')
 
 
 
 
 const verifyToken = async (req, res, next) => {
-    console.log('verify token', req.headers)
-
+    // console.log('verify token', req.headers)
     const token = req.headers.authorization
     try {
         const decoded = jwt.verify(token, process.env.SECRET)
@@ -85,75 +85,113 @@ router.get('/', verifyToken, async (req, res) => {
     return res.json(req.user)
 })
 
+router.post('/bookingcommitRequest', async (req, res) => {
+
+    const { bookingDetails } = req.body
+    const newBooking = await Booking.create(bookingDetails)
+        .then(res.send("booking created"))
+        .catch((err) => {
+            res.send(" an error was  found while creating the booking", err)
+        })
+    return res.ok
+})
+
 router.post('/getAvailableBookings', async (req, res) => {
     const { date, fromTime, toTime, numberOfParticipants } = req.body.fieldsValue
-    console.log("date: ", date, "fromTime: ", fromTime, "toTime", toTime,
-        "numberOfParticipants", numberOfParticipants)
+    console.log(date)
     let reqFromTime = moment(fromTime).get('hour') * 60 + moment(fromTime).get('minutes')
-    let reqToTime = moment(toTime).format("hh") * 60 + moment(toTime).get('minutes')
+    let reqToTime = moment(toTime).get('hour') * 60 + moment(toTime).get('minutes')
     try {
         let sameTimeBooking = []
         let i = 0
         const rooms = await Room.find({ maxOfPeople: { $gte: numberOfParticipants } }).exec()
-        rooms.sort((a, b) => (a.maxOfPeople < b.maxOfPeople ? -1 : 1))
-
+        rooms.sort((a, b) => (a.maxOfPeople <= b.maxOfPeople ? -1 : 1))
         const bookingsFunc = async () => {
-            return await Booking.find(
-                { date: date },
-                function (roomId) {
-                    rooms.includes({ roomId })
-                }
-            ).clone().catch(function (err) { console.log(err) })
+            let meetings = await Booking.find({}).exec();
+            meetings = meetings.filter((d) => (
+                moment(d.meetingDate).format('l') == moment(date).format('l')
+            ))
+            console.log("meetings: ", meetings.length)
+            return meetings;
         }
+        //פה זה הוציא את כל הפגישות שבאותו תאריך
         const bookings = await bookingsFunc()
-        do {
-            sameTimeBooking = bookings.filter((booking) =>
-            (booking.endTime > reqFromTime && booking.startTime < reqToTime
-                && rooms[i] == booking._ID))
-            i++
+        console.log("bookings", bookings)
+        //לולאה שבודקת אם הזמן של הפגישה פנוי
+        //זה עובד ומחזיר או חדר פנוי או מערך אלטרנטיבי
 
-        } while (sameTimeBooking.length != 0 && i < rooms.length)
-        if (sameTimeBooking.length == 0) {
-            console.log("bookingsvvvvvvvvvvvv", rooms[i - 1])
-            return res.json(rooms[i - 1]) ;
+
+        // console.log("booking.endTime >= reqFromTime", booking.endTime, "--", reqFromTime, "response", booking.endTime >= reqFromTime)
+        // console.log("booking.startTime <= reqToTime", booking.startTime, "--", reqToTime, "response", booking.startTime <= reqToTime)
+        // console.log("rooms[", i, "]._id == booking.roomId", rooms[i]._id.toString(), "--", booking.roomId, "response", rooms[i]._id.toString() == booking.roomId.toString())
+        // console.log("all", booking.endTime >= reqFromTime && booking.startTime <= reqToTime
+        //     && rooms[i]._id.toString() == booking.roomId.toString())
+
+
+        if (bookings.length != 0) {
+            do {
+                sameTimeBooking = bookings.filter((booking) => (
+                    booking.endTime >= reqFromTime && booking.startTime <= reqToTime
+                    && rooms[i]._id.toString() == booking.roomId.toString()
+                ))
+                i++
+            } while (sameTimeBooking.length != 0 && i < rooms.length)
+            i--
         }
-
+        if (sameTimeBooking.length == 0) {
+            const toTime = reqToTime
+            const fromTime = reqFromTime
+            const roomFound = rooms[i]
+            const subResponse = { date, fromTime, toTime, roomFound }
+            const response = { exact: subResponse, alternatives: null }
+            console.log("response", response)
+            return res.json(response);
+        }
+        //}
         //אם לא מצאנו חדר מתאים פנוי
         let options = []
         let numOfTrys = 1
         let optionFromTime = reqFromTime
         let optionToTime = reqToTime
+        console.log("FromTime", optionFromTime, "ToTime", optionToTime)
         while (options.length < 3 && numOfTrys <= 16) {
-            console.log("numOfTrys++", numOfTrys)
-            console.log("options.length", options.length)
-            if (numOfTrys % 2 == 0) {
+            if (numOfTrys % 2 == 0) {//אי זוגי
                 optionFromTime = optionFromTime + 15 * numOfTrys
                 optionToTime = optionToTime + 15 * numOfTrys
             }
-            else {
+            else {//זוגי
                 optionFromTime = optionFromTime - 15 * numOfTrys
                 optionToTime = optionToTime - 15 * numOfTrys
             }
+            console.log("optionFromTime", optionFromTime, "optionToTime", optionToTime)
             for (i = 0; i < rooms.length; i++) {
-                sameTimeBooking = bookings.filter((booking) =>
-                (booking.endTime > optionFromTime && booking.startTime < optionToTime
-                    && rooms[i] == booking._ID))
-                if (!sameTimeBooking) {
+
+                optionBooking = bookings.filter((booking) => (
+                    (booking.endTime < optionFromTime && booking.endTime < optionToTime)
+                    ||
+                    (booking.startTime > optionFromTime && booking.startTime > optionToTime)
+                    && rooms[i]._id.toString() == booking.roomId.toString()
+                ))
+                console.log("optionBooking", optionBooking)
+                if (optionBooking.length != 0) {
                     let roomFound = rooms[i]
                     options.push({ optionFromTime, optionToTime, date, roomFound })
                 }
             }
             numOfTrys++
+            console.log("options", options)
         }
+
         if (options.length == 0) {
-            console.log("options[]")
             res.status(400).send("no alternatives options")
             return;
         }
-        return options;
+        else {
+            const response = { exact: null, alternatives: options }
+            return res.json(response);
+        }
 
     } catch (error) {
-        console.log("Error: ", error)
         res.status(500).send(error)
     }
 })
