@@ -115,7 +115,7 @@ router.post('/getAvailableBookings', async (req, res) => {
         } while (sameTimeBooking.length != 0 && i < rooms.length)
         if (sameTimeBooking.length == 0) {
             console.log("bookingsvvvvvvvvvvvv", rooms[i - 1])
-            return res.json(rooms[i - 1]) ;
+            return res.json(rooms[i - 1]);
         }
 
         //אם לא מצאנו חדר מתאים פנוי
@@ -156,6 +156,23 @@ router.post('/getAvailableBookings', async (req, res) => {
         console.log("Error: ", error)
         res.status(500).send(error)
     }
+})
+
+
+router.post('/bookingOfUserRequest', async (req, res) => {
+    console.log("I am trying the server")
+    console.log(req.body.user)
+    try {
+        const bookingOfUser = await Booking.find({ owner: req.body.user })
+        console.log("bookingOfUser",bookingOfUser)
+        res.send(bookingOfUser);
+        // console.log('res.body',res);
+         return res
+    }
+    catch (err) {
+         return res.status(500).send(" an error was  found while searching for booking ", err)
+    }
+
 })
 
 
