@@ -200,4 +200,21 @@ router.post('/getAvailableBookings', async (req, res) => {
 })
 
 
+router.post('/bookingOfUserRequest', async (req, res) => {
+    console.log("I am trying the server")
+    console.log(req.body.user)
+    try {
+        const bookingOfUser = await Booking.find({ owner: req.body.user })
+        console.log("bookingOfUser",bookingOfUser)
+        res.send(bookingOfUser);
+        // console.log('res.body',res);
+         return res
+    }
+    catch (err) {
+         return res.status(500).send(" an error was  found while searching for booking ", err)
+    }
+
+})
+
+
 module.exports = router
