@@ -88,6 +88,7 @@ router.get('/', verifyToken, async (req, res) => {
 router.post('/bookingcommitRequest', async (req, res) => {
 
     const { bookingDetails } = req.body
+    console.log("bookingDetails",bookingDetails)
     const newBooking = await Booking.create(bookingDetails)
         .then(res.send("booking created"))
         .catch((err) => {
@@ -101,8 +102,6 @@ router.post('/getAvailableBookings', async (req, res) => {
     console.log(date)
     let reqFromTime = moment(fromTime).get('hour') * 60 + moment(fromTime).get('minutes')
     let reqToTime = moment(toTime).get('hour') * 60 + moment(toTime).get('minutes')
-    let optionFromTime = reqFromTime
-    let optionToTime = reqToTime
     let options = []
     try {
         let sameTimeBooking = []
@@ -142,21 +141,22 @@ router.post('/getAvailableBookings', async (req, res) => {
             i--
         }
         if (sameTimeBooking.length == 0) {
+            const toTime = reqToTime
+            const fromTime = reqFromTime
+            let roomFound = rooms[i]
             if(i==0){
-                const toTime = reqToTime
-                const fromTime = reqFromTime
-                const roomFound = rooms[i]
                 const subResponse = { date, fromTime, toTime, roomFound }
                 const response = { exact: subResponse, alternatives: null }
                 console.log("response", response)
                 return res.json(response);
             }
-            let roomFound = rooms[i]
-            options.push({ optionFromTime, optionToTime, date, roomFound })
+            options.push({ fromTime, toTime, date, roomFound })
         }
         //}
         //אם לא מצאנו חדר מתאים פנוי
         let numOfTrys = 1
+        let optionFromTime = reqFromTime
+        let optionToTime = reqToTime
         console.log("FromTime", optionFromTime, "ToTime", optionToTime)
         for (i = 0; i < rooms.length; i++) {
             while (options.length < 3 && numOfTrys <= 16) {
@@ -178,7 +178,9 @@ router.post('/getAvailableBookings', async (req, res) => {
                 console.log("optionBooking", optionBooking)
                 if (optionBooking.length != 0) {
                     let roomFound = rooms[i]
-                    options.push({ optionFromTime, optionToTime, date, roomFound })
+                    let toTime=optionToTime
+                    let fromTime= optionFromTime
+                    options.push({ fromTime, toTime, date, roomFound })
                 }
                 numOfTrys++
                 console.log("options", options)
