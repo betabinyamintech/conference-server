@@ -101,6 +101,9 @@ router.post('/getAvailableBookings', async (req, res) => {
     console.log(date)
     let reqFromTime = moment(fromTime).get('hour') * 60 + moment(fromTime).get('minutes')
     let reqToTime = moment(toTime).get('hour') * 60 + moment(toTime).get('minutes')
+    let optionFromTime = reqFromTime
+    let optionToTime = reqToTime
+    let options = []
     try {
         let sameTimeBooking = []
         let i = 0
@@ -139,33 +142,33 @@ router.post('/getAvailableBookings', async (req, res) => {
             i--
         }
         if (sameTimeBooking.length == 0) {
-            const toTime = reqToTime
-            const fromTime = reqFromTime
-            const roomFound = rooms[i]
-            const subResponse = { date, fromTime, toTime, roomFound }
-            const response = { exact: subResponse, alternatives: null }
-            console.log("response", response)
-            return res.json(response);
+            if(i==0){
+                const toTime = reqToTime
+                const fromTime = reqFromTime
+                const roomFound = rooms[i]
+                const subResponse = { date, fromTime, toTime, roomFound }
+                const response = { exact: subResponse, alternatives: null }
+                console.log("response", response)
+                return res.json(response);
+            }
+            let roomFound = rooms[i]
+            options.push({ optionFromTime, optionToTime, date, roomFound })
         }
         //}
         //אם לא מצאנו חדר מתאים פנוי
-        let options = []
         let numOfTrys = 1
-        let optionFromTime = reqFromTime
-        let optionToTime = reqToTime
         console.log("FromTime", optionFromTime, "ToTime", optionToTime)
-        while (options.length < 3 && numOfTrys <= 16) {
-            if (numOfTrys % 2 == 0) {//אי זוגי
-                optionFromTime = optionFromTime + 15 * numOfTrys
-                optionToTime = optionToTime + 15 * numOfTrys
-            }
-            else {//זוגי
-                optionFromTime = optionFromTime - 15 * numOfTrys
-                optionToTime = optionToTime - 15 * numOfTrys
-            }
-            console.log("optionFromTime", optionFromTime, "optionToTime", optionToTime)
-            for (i = 0; i < rooms.length; i++) {
-
+        for (i = 0; i < rooms.length; i++) {
+            while (options.length < 3 && numOfTrys <= 16) {
+                if (numOfTrys % 2 == 0) {//אי זוגי
+                    optionFromTime = optionFromTime + 15 * numOfTrys
+                    optionToTime = optionToTime + 15 * numOfTrys
+                }
+                else {//זוגי
+                    optionFromTime = optionFromTime - 15 * numOfTrys
+                    optionToTime = optionToTime - 15 * numOfTrys
+                }
+                console.log("optionFromTime", optionFromTime, "optionToTime", optionToTime)
                 optionBooking = bookings.filter((booking) => (
                     (booking.endTime < optionFromTime && booking.endTime < optionToTime)
                     ||
@@ -177,9 +180,9 @@ router.post('/getAvailableBookings', async (req, res) => {
                     let roomFound = rooms[i]
                     options.push({ optionFromTime, optionToTime, date, roomFound })
                 }
-            }
-            numOfTrys++
-            console.log("options", options)
+                numOfTrys++
+                console.log("options", options)
+            }   
         }
 
         if (options.length == 0) {
