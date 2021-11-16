@@ -4,6 +4,7 @@ const User = require('../model/user')
 const jwt = require('jsonwebtoken')
 const Room = require('../model/room')
 const Booking = require('../model/booking')
+const Subscribers = require('../model/subscribers')
 var moment = require('moment'); // require
 const { $where } = require('../model/user')
 
@@ -88,7 +89,7 @@ router.get('/', verifyToken, async (req, res) => {
 router.post('/bookingcommitRequest', async (req, res) => {
 
     const { bookingDetails } = req.body
-    console.log("bookingDetails",bookingDetails)
+    console.log("bookingDetails", bookingDetails)
     const newBooking = await Booking.create(bookingDetails)
         .then(res.send("booking created"))
         .catch((err) => {
@@ -144,7 +145,7 @@ router.post('/getAvailableBookings', async (req, res) => {
             const toTime = reqToTime
             const fromTime = reqFromTime
             let roomFound = rooms[i]
-            if(i==0){
+            if (i == 0) {
                 const subResponse = { date, fromTime, toTime, roomFound }
                 const response = { exact: subResponse, alternatives: null }
                 console.log("response", response)
@@ -178,13 +179,13 @@ router.post('/getAvailableBookings', async (req, res) => {
                 console.log("optionBooking", optionBooking)
                 if (optionBooking.length != 0) {
                     let roomFound = rooms[i]
-                    let toTime=optionToTime
-                    let fromTime= optionFromTime
+                    let toTime = optionToTime
+                    let fromTime = optionFromTime
                     options.push({ fromTime, toTime, date, roomFound })
                 }
                 numOfTrys++
                 console.log("options", options)
-            }   
+            }
         }
 
         if (options.length == 0) {
@@ -207,16 +208,75 @@ router.post('/bookingOfUserRequest', async (req, res) => {
     console.log(req.body.user)
     try {
         const bookingOfUser = await Booking.find({ owner: req.body.user })
-        console.log("bookingOfUser",bookingOfUser)
+        console.log("bookingOfUser", bookingOfUser)
         res.send(bookingOfUser);
         // console.log('res.body',res);
-         return res
+        return res
     }
     catch (err) {
-         return res.status(500).send(" an error was  found while searching for booking ", err)
+        return res.status(500).send(" an error was  found while searching for booking ", err)
     }
 
 })
 
+
+
+router.post('/checkIfSubscriberRequest', async (req, res) => {
+
+    const { bookingDetails } = req.body
+    const { owner } = bookingDetails
+    let subscriber = ""
+    const userDetails = await User.find({ _id: owner })
+    if (userDetails)
+        subscriber = await Subscribers.find({ phone: userDetails.phone })
+    else
+        return res.send("error. not found user", err)
+
+    if (subscriber)
+
+        return res.json(subscriber)
+    else
+        return res.json(-1)
+
+})
+
+router.post('/IfSubscriberPay', async (req, res) => {
+    const { bookingDetails } = req.body
+    console.log("IfSubscriberPay",bookingDetails)
+    const { owner, roomId } = bookingDetails
+    let subscriber = ""
+    const userDetails = await User.find({ _id: owner })
+    console.log("userDetails",userDetails)
+    if (userDetails)
+        subscriber = await Subscribers.find({ phone: userDetails.phone })
+    else
+        return res.send("error. not found user", err)
+
+    if (subscriber.length!=0) {
+        console.log("no",subscriber)
+        const room = await Room.find({ _id: roomId })
+        if (room)
+            if (room.value <= subscriber.coinsBlance) {
+                let coins = subscriber.coinsBlance - room.value
+                await Subscribers.updateOne(
+                    { _id: subscriber._id },
+                    {
+                        $set: { "coinsBlance": coins }
+                    }
+                )
+            }
+            else
+                return res.json("-1")
+        else
+            return res.send("error. not found user", err)
+
+        return res.json(subscriber)
+    }
+    else {
+        console.log("yes")
+        return res.json("-1")
+    }
+
+})
 
 module.exports = router
