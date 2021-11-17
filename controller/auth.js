@@ -1,31 +1,13 @@
 var express = require('express')
 var router = express.Router()
 const User = require('../model/user')
-const jwt = require('jsonwebtoken')
 const Room = require('../model/room')
 const Booking = require('../model/booking')
 const Subscribers = require('../model/subscribers')
-var moment = require('moment'); // require
-const { $where } = require('../model/user')
+const { verifyToken } = require('../middleware/verifyToken')
+const jwt = require('jsonwebtoken')
 
 
-
-
-const verifyToken = async (req, res, next) => {
-    // console.log('verify token', req.headers)
-    const token = req.headers.authorization
-    try {
-        const decoded = jwt.verify(token, process.env.SECRET)
-        const user = await User.findOne({ email: decoded.email }).exec()
-        delete user.password
-        req.user = user
-        console.log('authorization user', req.user)
-        next()
-    } catch (error) {
-        res.status(403).send("token invalid or expired")
-    }
-    // hide the password
-}
 
 router.post('/register', async (req, res) => {
     try {
@@ -71,7 +53,6 @@ router.post('/login', async (req, res) => {
         }
 
         res.json({ token: jwt.sign({ email }, process.env.SECRET, { expiresIn: "2h" }) })
-
     } catch (error) {
         console.log("Error: ", error)
         res.status(500).send(error)
@@ -86,121 +67,7 @@ router.get('/', verifyToken, async (req, res) => {
     return res.json(req.user)
 })
 
-router.post('/bookingcommitRequest', async (req, res) => {
 
-    const { bookingDetails } = req.body
-    console.log("bookingDetails", bookingDetails)
-    const newBooking = await Booking.create(bookingDetails)
-        .then(res.send("booking created"))
-        .catch((err) => {
-            res.send(" an error was  found while creating the booking", err)
-        })
-    return res.ok
-})
-
-router.post('/getAvailableBookings', async (req, res) => {
-    const { date, fromTime, toTime, numberOfParticipants } = req.body.fieldsValue
-    console.log(date)
-    let reqFromTime = moment(fromTime).get('hour') * 60 + moment(fromTime).get('minutes')
-    let reqToTime = moment(toTime).get('hour') * 60 + moment(toTime).get('minutes')
-    let options = []
-    try {
-        let sameTimeBooking = []
-        let i = 0
-        const rooms = await Room.find({ maxOfPeople: { $gte: numberOfParticipants } }).exec()
-        rooms.sort((a, b) => (a.maxOfPeople <= b.maxOfPeople ? -1 : 1))
-        const bookingsFunc = async () => {
-            let meetings = await Booking.find({}).exec();
-            meetings = meetings.filter((d) => (
-                moment(d.meetingDate).format('l') == moment(date).format('l')
-            ))
-            console.log("meetings: ", meetings.length)
-            return meetings;
-        }
-        //פה זה הוציא את כל הפגישות שבאותו תאריך
-        const bookings = await bookingsFunc()
-        console.log("bookings", bookings)
-        //לולאה שבודקת אם הזמן של הפגישה פנוי
-        //זה עובד ומחזיר או חדר פנוי או מערך אלטרנטיבי
-
-
-        // console.log("booking.endTime >= reqFromTime", booking.endTime, "--", reqFromTime, "response", booking.endTime >= reqFromTime)
-        // console.log("booking.startTime <= reqToTime", booking.startTime, "--", reqToTime, "response", booking.startTime <= reqToTime)
-        // console.log("rooms[", i, "]._id == booking.roomId", rooms[i]._id.toString(), "--", booking.roomId, "response", rooms[i]._id.toString() == booking.roomId.toString())
-        // console.log("all", booking.endTime >= reqFromTime && booking.startTime <= reqToTime
-        //     && rooms[i]._id.toString() == booking.roomId.toString())
-
-
-        if (bookings.length != 0) {
-            do {
-                sameTimeBooking = bookings.filter((booking) => (
-                    booking.endTime >= reqFromTime && booking.startTime <= reqToTime
-                    && rooms[i]._id.toString() == booking.roomId.toString()
-                ))
-                i++
-            } while (sameTimeBooking.length != 0 && i < rooms.length)
-            i--
-        }
-        if (sameTimeBooking.length == 0) {
-            const toTime = reqToTime
-            const fromTime = reqFromTime
-            let roomFound = rooms[i]
-            if (i == 0) {
-                const subResponse = { date, fromTime, toTime, roomFound }
-                const response = { exact: subResponse, alternatives: null }
-                console.log("response", response)
-                return res.json(response);
-            }
-            options.push({ fromTime, toTime, date, roomFound })
-        }
-        //}
-        //אם לא מצאנו חדר מתאים פנוי
-        let numOfTrys = 1
-        let optionFromTime = reqFromTime
-        let optionToTime = reqToTime
-        console.log("FromTime", optionFromTime, "ToTime", optionToTime)
-        for (i = 0; i < rooms.length; i++) {
-            while (options.length < 3 && numOfTrys <= 16) {
-                if (numOfTrys % 2 == 0) {//אי זוגי
-                    optionFromTime = optionFromTime + 15 * numOfTrys
-                    optionToTime = optionToTime + 15 * numOfTrys
-                }
-                else {//זוגי
-                    optionFromTime = optionFromTime - 15 * numOfTrys
-                    optionToTime = optionToTime - 15 * numOfTrys
-                }
-                console.log("optionFromTime", optionFromTime, "optionToTime", optionToTime)
-                optionBooking = bookings.filter((booking) => (
-                    (booking.endTime < optionFromTime && booking.endTime < optionToTime)
-                    ||
-                    (booking.startTime > optionFromTime && booking.startTime > optionToTime)
-                    && rooms[i]._id.toString() == booking.roomId.toString()
-                ))
-                console.log("optionBooking", optionBooking)
-                if (optionBooking.length != 0) {
-                    let roomFound = rooms[i]
-                    let toTime = optionToTime
-                    let fromTime = optionFromTime
-                    options.push({ fromTime, toTime, date, roomFound })
-                }
-                numOfTrys++
-                console.log("options", options)
-            }
-        }
-
-        if (options.length == 0) {
-            res.status(400).send("no alternatives options")
-            return;
-        }
-        else {
-            const response = { exact: null, alternatives: options }
-            return res.json(response);
-        }
-
-    } catch (error) {
-        res.status(500).send(error)
-    }
-})
 
 
 router.post('/bookingOfUserRequest', async (req, res) => {
@@ -242,24 +109,27 @@ router.post('/checkIfSubscriberRequest', async (req, res) => {
 
 router.post('/IfSubscriberPay', async (req, res) => {
     const { bookingDetails } = req.body
-    console.log("IfSubscriberPay",bookingDetails)
+    console.log("IfSubscriberPay", bookingDetails)
     const { owner, roomId } = bookingDetails
     let subscriber = ""
     const userDetails = await User.find({ _id: owner })
-    console.log("userDetails",userDetails)
-    if (userDetails)
-        subscriber = await Subscribers.find({ phone: userDetails.phone })
+
+    if (userDetails) {
+        subscriber = await Subscribers.find({ phone: userDetails[0].phone })
+        console.log(subscriber)
+    }
     else
         return res.send("error. not found user", err)
 
-    if (subscriber.length!=0) {
-        console.log("no",subscriber)
+    if (subscriber.length != 0) {
+        console.log("no", subscriber)
         const room = await Room.find({ _id: roomId })
+        console.log("room", room)
         if (room)
-            if (room.value <= subscriber.coinsBlance) {
-                let coins = subscriber.coinsBlance - room.value
+            if (room[0].value <= subscriber[0].coinsBlance) {
+                let coins = subscriber[0].coinsBlance - room[0].value
                 await Subscribers.updateOne(
-                    { _id: subscriber._id },
+                    { _id: subscriber[0]._id },
                     {
                         $set: { "coinsBlance": coins }
                     }
