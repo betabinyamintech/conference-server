@@ -28,14 +28,13 @@ router.post('/login', async (req, res) => {
 router.post('/getAvailableBookings', async (req, res) => {
     const { date, fromTime, toTime, numberOfParticipants } = req.body
     try {
-
-        let fromTimeMoment = moment(date + fromTime)
-        let toTimeMoment = moment(date + toTime)
+        let fromTimeMoment = moment(date +"T"+ fromTime)
+        let toTimeMoment = moment(date +"T"+ toTime)
         let beforeAfterHours = 2
         let i = 0
         const rooms = await Room.find({ maxOfPeople: { $gte: numberOfParticipants } })
             .sort({ maxOfPeople: 1 }).exec()
-        const bookings = await Booking.find({
+        const bookings = await booking.find({
             meetingDate: date,
             fromTime: {
                 $lte: toTimeMoment.clone().add(beforeAfterHours, 'h').unix(),
@@ -43,14 +42,12 @@ router.post('/getAvailableBookings', async (req, res) => {
             toTime: {
                 $gte: fromTimeMoment.clone().subtract(beforeAfterHours, 'h').unix(),
             },
-            roomId: { $in: rooms.map((room) => room._id)}
+             roomId: { $in: rooms.map((room) => room._id)}
         }).exec();
-
         let numOfTrys = 0
-        let optionFromTime = reqFromTime
-        let optionToTime = reqToTime
+        let optionFromTime = fromTimeMoment
+        let optionToTime = toTimeMoment
         let options = []
-        console.log("FromTime", optionFromTime, "ToTime", optionToTime)
 
         const available = (option) =>
             bookings.find((booking) => (
@@ -59,17 +56,20 @@ router.post('/getAvailableBookings', async (req, res) => {
             )) == null
 
         for (i = 0; i < rooms.length; i++) {
+            
             while (options.length < 3 && numOfTrys <= beforeAfterHours * (60 / 15) * 2) {
                 const direction = numOfTrys % 2 ? 1 : -1
                 const option = {
-                    roomDetails: room[i],
+                    roomDetails: rooms[i],
                     roomId: rooms[i]._id,
                     date,
                     startTime: fromTimeMoment.clone().add(15 * direction * numOfTrys, 'm').unix(),
-                    endTime: endTimeMoment.clone().add(15 * direction * numOFTrys, 'm').unix()
+                    endTime: toTimeMoment.clone().add(15 * direction * numOfTrys, 'm').unix()
                 }
+                
                 if (available(option)) {
                     if (i == 0 && numOfTrys == 0) {
+                        console.log("return")
                         return res.json({ exact: option })
                     }
                     options.push(option)
@@ -94,7 +94,7 @@ router.post('/getAvailableBookings', async (req, res) => {
 router.post('/bookingcommitRequest', verifyToken, async (req, res) => {
     const bookingDetails = req.body
     try {
-        await Booking.create({...bookingDetails, owner: req.user._id})
+        await booking.create({...bookingDetails, owner: req.user._id})
         res.json("booking created")
     } catch (err) {
             res.send(" an error was  found while creating the booking", err)
