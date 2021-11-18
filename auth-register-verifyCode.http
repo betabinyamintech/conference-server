@@ -1,0 +1,9 @@
+POST http://localhost:4000/auth/verifyCode
+Content-Type: application/json
+
+{
+"phone": "22222222222",
+    "code": "1234"
+
+ }
+ 

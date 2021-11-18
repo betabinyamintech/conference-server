@@ -4,6 +4,7 @@ const User = require('../model/user')
 const jwt = require('jsonwebtoken')
 const Room = require('../model/room')
 const Booking = require('../model/booking')
+const phoneVerification = require('../model/phoneVerification')
 
 
 const verifyToken = async (req, res, next) => {
@@ -22,11 +23,15 @@ const verifyToken = async (req, res, next) => {
     }
     // hide the password
 }
-
+//לאחר מספר דקות שהקוד אינו בתוקף יש למחוק אותו מהדתה בייס
 router.post('/register', async (req, res) => {
     try {
         console.log({ body: req.body })
-        const { email, password } = req.body
+        const { phone, email, password, code } = req.body
+
+        if (!verifyPhoneCode(phone, code)) {
+            res.status(400).send("phone verification failed")
+        }
 
         if (email == null || password == null) {
             res.status(400).send("email or password missing")
@@ -38,12 +43,16 @@ router.post('/register', async (req, res) => {
             return res;
         }
 
-        const existingUser = await User.findOne({ email }).exec()
-        console.log({ existingUser })
-        if (existingUser) {
-            res.status(400).send("User Already Exists")
+        const existingPhone = await User.findOne({ phone }).exec()
+        if (existingPhone) {
+            res.status(400).send("User with this phone Already Exists")
             return res;
         }
+
+        if (await User.findOne({ email}).exec()) {
+            return res.status(400).send("User with this e-mail already exists")
+        }
+
         console.log("creaeting user", req.body)
         const newUser = await User.create(req.body)
         res.json({ token: jwt.sign({ email }, process.env.SECRET, { expiresIn: "2h" }) })
@@ -131,5 +140,48 @@ router.post('/bookingRequestToServer', async (req, res) => {
         res.status(500).send(error)
     }
 })
+
+function pad(num, size) {
+    num = num.toString();
+    while (num.length < size) num = "0" + num;
+    return num;
+}
+
+//send password to phone
+router.get('/sendVerification', async (req, res) => {
+    console.log("quuery", req.query)
+    const { phone } = req.query
+    //מגריל מספר כלשהו בין 0 ל1 ואז כשמכפילים אותו ב10000 זה מעביר 4 ספרות ללפני הנקודה ואח"כ מוחקים את הספרות שאחרי הנקודה
+    let code = Math.floor(Math.random() * 10000)
+
+    // מוסיף את הפלאפון והסיסמה לטבלת פונ וריפיכישנ
+    await phoneVerification.create({ phone, code })
+    console.log("add the code :", code, "to database. with phone: ", phone)
+    //צריך לעשות פונקציה ששולחת לפאלפון את הסיסמה
+    //יש לעשות בדיקה האם זה אכן הצליח לשלוח
+    return res.json()
+})
+
+// מקבל סיסמה ופלאפון ובודק אם היא זהה לזו ששלח באס אמ אס
+async function verifyPhoneCode(phone, code) {
+    console.log("auth - verifyCode get the phone: ", phone, " & code: ", code)
+
+    const last_phoneVerification = await phoneVerification.findOne({ phone }).sort({ timestamp: 'descending' })
+    console.log("the last_phoneVerification is :", last_phoneVerification)
+    if (last_phoneVerification != null && last_phoneVerification.code == code) {
+        //  מוחק את כל הסיסמאות ששמורות עם הפאלפון הזה
+        phoneVerification.deleteMany({ phone }).then(function () {
+            console.log("auth - sendVerification delete all the same phone succed"); // Success
+        }).catch(function (error) {
+            console.log("auth - sendVerification delete all the same phone faile. error:", error); // Failure
+        });
+
+        return true
+    }
+
+    //לאחר שהסיסמאות זהות יכול למחוק את כל הסיסמאות מהדתא בייס ששיכות לפאלפון הזה בלבד
+    return false
+
+}
 
 module.exports = router
