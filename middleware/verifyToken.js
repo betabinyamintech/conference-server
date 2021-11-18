@@ -2,8 +2,8 @@ const jwt = require('jsonwebtoken')
 const User = require('../model/user')
 
 const verifyToken = async (req, res, next) => {
-    console.log('verify token', req.headers)
     const token = req.headers.authorization
+    console.log('verify token ', token)
     try {
         const decoded = jwt.verify(token, process.env.SECRET)
         const user = await User.findOne({ email: decoded.email }).exec()
