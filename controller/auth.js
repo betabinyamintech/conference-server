@@ -24,14 +24,14 @@ const verifyToken = async (req, res, next) => {
 }
 //לאחר מספר דקות שהקוד אינו בתוקף יש למחוק אותו מהדתה בייס
 const Subscribers = require('../model/subscribers')
-const { verifyToken } = require('../middleware/verifyToken')
+// const { verifyToken } = require('../middleware/verifyToken')
 const jwt = require('jsonwebtoken')
 
 
 
 router.post('/register', async (req, res) => {
     try {
-        console.log({ body: req.body })
+        console.log("auth - register: body: req.body",{ body: req.body })
         const { phone, email, password, code } = req.body
 
         if (!verifyPhoneCode(phone, code)) {
@@ -53,8 +53,8 @@ router.post('/register', async (req, res) => {
             res.status(400).send("User with this phone Already Exists")
             return res;
         }
-
-        if (await User.findOne({ email}).exec()) {
+        const existingEmail = await User.findOne({ email }).exec()
+        if (existingEmail) {
             return res.status(400).send("User with this e-mail already exists")
         }
 
@@ -125,7 +125,8 @@ router.post('/checkIfSubscriberRequest', async (req, res) => {
     if (userDetails)
         subscriber = await Subscribers.find({ phone: userDetails.phone })
     else
-        return res.send("error. not found user", err)
+        return 
+        res.send("error. not found user", err)
 
     if (subscriber)
 
@@ -185,14 +186,14 @@ function pad(num, size) {
 
 //send password to phone
 router.get('/sendVerification', async (req, res) => {
-    console.log("quuery", req.query)
+    console.log("auth - sendVerification: req.query", req.query)
     const { phone } = req.query
     //מגריל מספר כלשהו בין 0 ל1 ואז כשמכפילים אותו ב10000 זה מעביר 4 ספרות ללפני הנקודה ואח"כ מוחקים את הספרות שאחרי הנקודה
     let code = Math.floor(Math.random() * 10000)
 
     // מוסיף את הפלאפון והסיסמה לטבלת פונ וריפיכישנ
     await phoneVerification.create({ phone, code })
-    console.log("add the code :", code, "to database. with phone: ", phone)
+    console.log("auth - sendVerification: add the code: ", code, "to database. with phone: ", phone)
     //צריך לעשות פונקציה ששולחת לפאלפון את הסיסמה
     //יש לעשות בדיקה האם זה אכן הצליח לשלוח
     return res.json()
