@@ -1,7 +1,6 @@
 var express = require('express')
 var router = express.Router()
 const User = require('../model/user')
-const jwt = require('jsonwebtoken')
 const Room = require('../model/room')
 const Booking = require('../model/booking')
 const phoneVerification = require('../model/phoneVerification')
@@ -24,6 +23,12 @@ const verifyToken = async (req, res, next) => {
     // hide the password
 }
 //לאחר מספר דקות שהקוד אינו בתוקף יש למחוק אותו מהדתה בייס
+const Subscribers = require('../model/subscribers')
+const { verifyToken } = require('../middleware/verifyToken')
+const jwt = require('jsonwebtoken')
+
+
+
 router.post('/register', async (req, res) => {
     try {
         console.log({ body: req.body })
@@ -76,7 +81,6 @@ router.post('/login', async (req, res) => {
         }
 
         res.json({ token: jwt.sign({ email }, process.env.SECRET, { expiresIn: "2h" }) })
-
     } catch (error) {
         console.log("Error: ", error)
         res.status(500).send(error)
@@ -91,54 +95,86 @@ router.get('/', verifyToken, async (req, res) => {
     return res.json(req.user)
 })
 
-router.post('/bookingRequestToServer', async (req, res) => {
-    const { date, fromTime, toTime, numberOfParticipants } = req.body
-    console.log("date: ", date, "fromTime: ", fromTime, "toTime", toTime,
-        "numberOfParticipants", numberOfParticipants)
 
+
+
+router.post('/bookingOfUserRequest', async (req, res) => {
+    console.log("I am trying the server")
+    console.log(req.body.user)
     try {
-        const findRoom = await Room.find({}).exec()
-        if (!findRoom) {
-            res.status(400).send("Somthing wrong...")
-            return;
-        }
-        roomMatchPeople = findRoom.filter((room) => (room.maxOfPeople >= numberOfParticipants))
-        console.log("findRoom", roomMatchPeople)
-        roomMatchPeople.sort((a, b) => (a.maxOfPeople < b.maxOfPeople && a.value < b.value ? -1 : 1))
-        let allBooking = [];
-        let matchingRoom = "";
-        for (i = 0; i < roomMatchPeople.length; i++) {
-            matchingRoom = roomMatchPeople[i]
-            // && {meetingDate:date}
-            allBooking = await Booking.find({ roomId: matchingRoom._id })
-            const sameTimeBooking = allBooking.filter((booking) =>
-                (booking.endTime > fromTime && booking.startTime < toTime))
-            if (!sameTimeBooking) {
-                break;
-            }
-        }
-        if (i < roomMatchPeople.length)
-            return matchingRoom;
-        else {
-            // roomMatchPeople=roomMatchPeople.filter((room)=>roomMatchPeople[0].value==room.value)
-            // allOptions=[]
-            // for (i = 0; i < roomMatchPeople.length; i++) {
-            //     matchingRoom = roomMatchPeople[i]
-            //     // && {meetingDate:date}
-            //     allBooking = await Booking.find({ roomId: matchingRoom._id })
-            //     const sameTimeBooking = allBooking.filter((booking) =>
-            //         (booking.endTime > fromTime && booking.startTime < toTime))
-            //     if (!sameTimeBooking) {
-            //         // allOptions.push(matchingRoom)
-            //         break;
-            //     }
-            // }
-        }
-
-    } catch (error) {
-        console.log("Error: ", error)
-        res.status(500).send(error)
+        const bookingOfUser = await Booking.find({ owner: req.body.user })
+        console.log("bookingOfUser", bookingOfUser)
+        res.send(bookingOfUser);
+        // console.log('res.body',res);
+        return res
     }
+    catch (err) {
+        return res.status(500).send(" an error was  found while searching for booking ", err)
+    }
+
+})
+
+
+
+router.post('/checkIfSubscriberRequest', async (req, res) => {
+
+    const { bookingDetails } = req.body
+    const { owner } = bookingDetails
+    let subscriber = ""
+    const userDetails = await User.find({ _id: owner })
+    if (userDetails)
+        subscriber = await Subscribers.find({ phone: userDetails.phone })
+    else
+        return res.send("error. not found user", err)
+
+    if (subscriber)
+
+        return res.json(subscriber)
+    else
+        return res.json(-1)
+
+})
+
+router.post('/IfSubscriberPay', async (req, res) => {
+    const { bookingDetails } = req.body
+    console.log("IfSubscriberPay", bookingDetails)
+    const { owner, roomId } = bookingDetails
+    let subscriber = ""
+    const userDetails = await User.find({ _id: owner })
+
+    if (userDetails) {
+        subscriber = await Subscribers.find({ phone: userDetails[0].phone })
+        console.log(subscriber)
+    }
+    else
+        return res.send("error. not found user", err)
+
+    if (subscriber.length != 0) {
+        console.log("no", subscriber)
+        const room = await Room.find({ _id: roomId })
+        console.log("room", room)
+        if (room)
+            if (room[0].value <= subscriber[0].coinsBlance) {
+                let coins = subscriber[0].coinsBlance - room[0].value
+                await Subscribers.updateOne(
+                    { _id: subscriber[0]._id },
+                    {
+                        $set: { "coinsBlance": coins }
+                    }
+                )
+            }
+            else
+                return res.json("-1")
+        else
+            return res.send("error. not found user", err)
+
+        return res.json(subscriber)
+    }
+    else {
+        console.log("yes")
+        return res.json("-1")
+    }
+
 })
 
 function pad(num, size) {
