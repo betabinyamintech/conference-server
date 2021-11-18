@@ -4,34 +4,13 @@ const User = require('../model/user')
 const Room = require('../model/room')
 const Booking = require('../model/booking')
 const phoneVerification = require('../model/phoneVerification')
-
-
-const verifyToken = async (req, res, next) => {
-    console.log('verify token', req.headers)
-
-    const token = req.headers.authorization
-    try {
-        const decoded = jwt.verify(token, process.env.SECRET)
-        const user = await User.findOne({ email: decoded.email }).exec()
-        delete user.password
-        req.user = user
-        console.log('authorization user', req.user)
-        next()
-    } catch (error) {
-        res.status(403).send("token invalid or expired")
-    }
-    // hide the password
-}
-//לאחר מספר דקות שהקוד אינו בתוקף יש למחוק אותו מהדתה בייס
 const Subscribers = require('../model/subscribers')
 const { verifyToken } = require('../middleware/verifyToken')
 const jwt = require('jsonwebtoken')
 
-
-
 router.post('/register', async (req, res) => {
     try {
-        console.log({ body: req.body })
+        console.log("auth - register: body: req.body",{ body: req.body })
         const { phone, email, password, code } = req.body
 
         if (!verifyPhoneCode(phone, code)) {
@@ -53,8 +32,8 @@ router.post('/register', async (req, res) => {
             res.status(400).send("User with this phone Already Exists")
             return res;
         }
-
-        if (await User.findOne({ email}).exec()) {
+        const existingEmail = await User.findOne({ email }).exec()
+        if (existingEmail) {
             return res.status(400).send("User with this e-mail already exists")
         }
 
@@ -95,9 +74,6 @@ router.get('/', verifyToken, async (req, res) => {
     return res.json(req.user)
 })
 
-
-
-
 router.post('/bookingOfUserRequest', async (req, res) => {
     console.log("I am trying the server")
     console.log(req.body.user)
@@ -114,18 +90,16 @@ router.post('/bookingOfUserRequest', async (req, res) => {
 
 })
 
-
-
-router.post('/checkIfSubscriberRequest', async (req, res) => {
+router.post('/checkIfSubscriberRequest', verifyToken, async (req, res) => {
 
     const { bookingDetails } = req.body
-    const { owner } = bookingDetails
     let subscriber = ""
-    const userDetails = await User.find({ _id: owner })
+    const userDetails = await User.find({ _id: req.user._id})
     if (userDetails)
         subscriber = await Subscribers.find({ phone: userDetails.phone })
     else
-        return res.send("error. not found user", err)
+        return 
+        res.send("error. not found user", err)
 
     if (subscriber)
 
@@ -135,12 +109,12 @@ router.post('/checkIfSubscriberRequest', async (req, res) => {
 
 })
 
-router.post('/IfSubscriberPay', async (req, res) => {
+router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
     const { bookingDetails } = req.body
     console.log("IfSubscriberPay", bookingDetails)
-    const { owner, roomId } = bookingDetails
+    const { roomId } = bookingDetails
     let subscriber = ""
-    const userDetails = await User.find({ _id: owner })
+    const userDetails = await User.find({ _id: req.user._id })
 
     if (userDetails) {
         subscriber = await Subscribers.find({ phone: userDetails[0].phone })
@@ -185,14 +159,14 @@ function pad(num, size) {
 
 //send password to phone
 router.get('/sendVerification', async (req, res) => {
-    console.log("quuery", req.query)
+    console.log("auth - sendVerification: req.query", req.query)
     const { phone } = req.query
     //מגריל מספר כלשהו בין 0 ל1 ואז כשמכפילים אותו ב10000 זה מעביר 4 ספרות ללפני הנקודה ואח"כ מוחקים את הספרות שאחרי הנקודה
     let code = Math.floor(Math.random() * 10000)
 
     // מוסיף את הפלאפון והסיסמה לטבלת פונ וריפיכישנ
     await phoneVerification.create({ phone, code })
-    console.log("add the code :", code, "to database. with phone: ", phone)
+    console.log("auth - sendVerification: add the code: ", code, "to database. with phone: ", phone)
     //צריך לעשות פונקציה ששולחת לפאלפון את הסיסמה
     //יש לעשות בדיקה האם זה אכן הצליח לשלוח
     return res.json()

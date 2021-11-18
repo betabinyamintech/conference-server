@@ -3,7 +3,7 @@ const {Schema}= mongoose
 
 const bookingSchema=new Schema({
     meetingDate:{
-        type:Date,
+        type:String,
         // require:true
     } ,
     startTime:{
