@@ -14,7 +14,7 @@ const subscribersSchema = new Schema({
         type: mongoose.Types.ObjectId,
         ref: 'programs'
     },
-   coinsBlance: {
+   coinsBalance: {
         type: Number
     }
 
