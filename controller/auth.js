@@ -10,7 +10,7 @@ const jwt = require('jsonwebtoken')
 
 router.post('/register', async (req, res) => {
     try {
-        console.log("auth - register: body: req.body",{ body: req.body })
+        console.log("auth - register: body: req.body", { body: req.body })
         const { phone, email, password, code } = req.body
 
         if (!verifyPhoneCode(phone, code)) {
@@ -59,10 +59,10 @@ router.post('/login', async (req, res) => {
             res.status(400).send("User or Password Invalid")
             return;
         }
-        const {phone}=existingUser
-       
+        const { phone } = existingUser
 
-        res.json({ token: jwt.sign({phone} , process.env.SECRET, { expiresIn: "2h" }) })
+
+        res.json({ token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }) })
     } catch (error) {
         console.log("Error: ", error)
         res.status(500).send(error)
@@ -113,12 +113,12 @@ router.post('/checkIfSubscriberRequest', verifyToken, async (req, res) => {
 
     const { bookingDetails } = req.body
     let subscriber = ""
-    const userDetails = await User.find({ _id: req.user._id})
+    const userDetails = await User.find({ _id: req.user._id })
     if (userDetails)
         subscriber = await Subscribers.find({ phone: userDetails.phone })
     else
-        return 
-        res.send("error. not found user", err)
+        return
+    res.send("error. not found user", err)
 
     if (subscriber)
 
@@ -130,29 +130,26 @@ router.post('/checkIfSubscriberRequest', verifyToken, async (req, res) => {
 
 router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
     const { bookingDetails } = req.body
+    let subscriber = []
     console.log("IfSubscriberPay", bookingDetails)
     const { roomId } = bookingDetails
-    let subscriber = ""
     const userDetails = await User.find({ _id: req.user._id })
-
     if (userDetails) {
         subscriber = await Subscribers.find({ phone: userDetails[0].phone })
-        console.log(subscriber)
     }
     else
         return res.send("error. not found user", err)
-
     if (subscriber.length != 0) {
         console.log("no", subscriber)
         const room = await Room.find({ _id: roomId })
         console.log("room", room)
         if (room)
-            if (room[0].value <= subscriber[0].coinsBlance) {
-                let coins = subscriber[0].coinsBlance - room[0].value
+            if (room[0].value <= subscriber[0].coinsBalance) {
+                let coins = subscriber[0].coinsBalance - room[0].value
                 await Subscribers.updateOne(
                     { _id: subscriber[0]._id },
                     {
-                        $set: { "coinsBlance": coins }
+                        $set: { "coinsBalance": coins }
                     }
                 )
             }
