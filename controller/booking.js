@@ -26,16 +26,17 @@ router.post('/login', async (req, res) => {
 })
 
 router.post('/getAvailableBookings', async (req, res) => {
-    const { date, fromTime, toTime, numberOfParticipants } = req.body
+    const { meetingDate, fromTime, toTime, numberOfParticipants } = req.body
     try {
-        let fromTimeMoment = moment(date +"T"+ fromTime)
-        let toTimeMoment = moment(date +"T"+ toTime)
+        let fromTimeMoment = moment(meetingDate +"T"+ fromTime)
+        let toTimeMoment = moment(meetingDate +"T"+ toTime)
         let beforeAfterHours = 2
         let i = 0
         const rooms = await Room.find({ maxOfPeople: { $gte: numberOfParticipants } })
             .sort({ maxOfPeople: 1 }).exec()
+        console.log("date ", meetingDate)
         const bookings = await booking.find({
-            meetingDate: date,
+            meetingDate: meetingDate,
             fromTime: {
                 $lte: toTimeMoment.clone().add(beforeAfterHours, 'h').unix(),
             },
@@ -44,9 +45,8 @@ router.post('/getAvailableBookings', async (req, res) => {
             },
              roomId: { $in: rooms.map((room) => room._id)}
         }).exec();
+        console.log("bookings ",bookings)
         let numOfTrys = 0
-        let optionFromTime = fromTimeMoment
-        let optionToTime = toTimeMoment
         let options = []
 
         const available = (option) =>
@@ -62,12 +62,13 @@ router.post('/getAvailableBookings', async (req, res) => {
                 const option = {
                     roomDetails: rooms[i],
                     roomId: rooms[i]._id,
-                    date,
+                    meetingDate: meetingDate,
                     startTime: fromTimeMoment.clone().add(15 * direction * numOfTrys, 'm').unix(),
                     endTime: toTimeMoment.clone().add(15 * direction * numOfTrys, 'm').unix()
                 }
                 
                 if (available(option)) {
+                    console.log("options: "+option," i: "+i+ " numOfTrys: "+numOfTrys)
                     if (i == 0 && numOfTrys == 0) {
                         console.log("return")
                         return res.json({ exact: option })
@@ -93,13 +94,15 @@ router.post('/getAvailableBookings', async (req, res) => {
 
 router.post('/bookingcommitRequest', verifyToken, async (req, res) => {
     const bookingDetails = req.body
+    console.log("bookingDetails ", bookingDetails)
     try {
-        await booking.create({...bookingDetails, owner: req.user._id})
+        await booking.create({...bookingDetails, owner: req.user._id, logDete:moment()})
         res.json("booking created")
     } catch (err) {
             res.send(" an error was  found while creating the booking", err)
     }
 })
+
 
 module.exports = router
 
