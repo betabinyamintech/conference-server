@@ -12,7 +12,7 @@ const verifyToken = async (req, res, next) => {
     const token = req.headers.authorization
     try {
         const decoded = jwt.verify(token, process.env.SECRET)
-        const user = await User.findOne({ email: decoded.email }).exec()
+        const user = await User.findOne({ phone: decoded.phone }).exec()
         delete user.password
         req.user = user
         console.log('authorization user', req.user)
@@ -25,6 +25,7 @@ const verifyToken = async (req, res, next) => {
 //לאחר מספר דקות שהקוד אינו בתוקף יש למחוק אותו מהדתה בייס
 const Subscribers = require('../model/subscribers')
 // const { verifyToken } = require('../middleware/verifyToken')
+//Json web token
 const jwt = require('jsonwebtoken')
 
 
@@ -60,7 +61,8 @@ router.post('/register', async (req, res) => {
 
         console.log("creaeting user", req.body)
         const newUser = await User.create(req.body)
-        res.json({ token: jwt.sign({ email }, process.env.SECRET, { expiresIn: "2h" }) })
+        //jwt - Json web token  מצפין האימייל בתוקן
+        res.json({ token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }) })
         return res;
     }
 
@@ -79,8 +81,26 @@ router.post('/login', async (req, res) => {
             res.status(400).send("User or Password Invalid")
             return;
         }
+        const {phone}=existingUser
+       
 
-        res.json({ token: jwt.sign({ email }, process.env.SECRET, { expiresIn: "2h" }) })
+        res.json({ token: jwt.sign({phone} , process.env.SECRET, { expiresIn: "2h" }) })
+    } catch (error) {
+        console.log("Error: ", error)
+        res.status(500).send(error)
+    }
+})
+
+router.post('/loginOtp', async (req, res) => {
+    console.log("loginOtp", req.body)
+    try {
+        const { phone, code } = req.body
+        if (!verifyPhoneCode(phone, code)) {
+            res.status(400).send("phone verification failed")
+            return;
+        }
+
+        res.json({ token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }) })
     } catch (error) {
         console.log("Error: ", error)
         res.status(500).send(error)
