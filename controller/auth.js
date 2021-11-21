@@ -4,31 +4,9 @@ const User = require('../model/user')
 const Room = require('../model/room')
 const Booking = require('../model/booking')
 const phoneVerification = require('../model/phoneVerification')
-
-
-const verifyToken = async (req, res, next) => {
-    console.log('verify token', req.headers)
-
-    const token = req.headers.authorization
-    try {
-        const decoded = jwt.verify(token, process.env.SECRET)
-        const user = await User.findOne({ phone: decoded.phone }).exec()
-        delete user.password
-        req.user = user
-        console.log('authorization user', req.user)
-        next()
-    } catch (error) {
-        res.status(403).send("token invalid or expired")
-    }
-    // hide the password
-}
-//לאחר מספר דקות שהקוד אינו בתוקף יש למחוק אותו מהדתה בייס
 const Subscribers = require('../model/subscribers')
-// const { verifyToken } = require('../middleware/verifyToken')
-//Json web token
+const { verifyToken } = require('../middleware/verifyToken')
 const jwt = require('jsonwebtoken')
-
-
 
 router.post('/register', async (req, res) => {
     try {
@@ -115,9 +93,6 @@ router.get('/', verifyToken, async (req, res) => {
     return res.json(req.user)
 })
 
-
-
-
 router.post('/bookingOfUserRequest', async (req, res) => {
     console.log("I am trying the server")
     console.log(req.body.user)
@@ -134,14 +109,11 @@ router.post('/bookingOfUserRequest', async (req, res) => {
 
 })
 
-
-
-router.post('/checkIfSubscriberRequest', async (req, res) => {
+router.post('/checkIfSubscriberRequest', verifyToken, async (req, res) => {
 
     const { bookingDetails } = req.body
-    const { owner } = bookingDetails
     let subscriber = ""
-    const userDetails = await User.find({ _id: owner })
+    const userDetails = await User.find({ _id: req.user._id})
     if (userDetails)
         subscriber = await Subscribers.find({ phone: userDetails.phone })
     else
@@ -156,12 +128,12 @@ router.post('/checkIfSubscriberRequest', async (req, res) => {
 
 })
 
-router.post('/IfSubscriberPay', async (req, res) => {
+router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
     const { bookingDetails } = req.body
     console.log("IfSubscriberPay", bookingDetails)
-    const { owner, roomId } = bookingDetails
+    const { roomId } = bookingDetails
     let subscriber = ""
-    const userDetails = await User.find({ _id: owner })
+    const userDetails = await User.find({ _id: req.user._id })
 
     if (userDetails) {
         subscriber = await Subscribers.find({ phone: userDetails[0].phone })
