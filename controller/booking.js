@@ -7,23 +7,23 @@ var moment = require('moment'); // require
 const { verifyToken } = require('../middleware/verifyToken')
 
 
-router.post('/login', async (req, res) => {
-    console.log("login", req.body)
-    try {
-        const { email, password } = req.body
-        const existingUser = await User.findOne({ email, password }).exec()
-        if (!existingUser) {
-            res.status(400).send("User or Password Invalid")
-            return;
-        }
+// router.post('/login', async (req, res) => {
+//     console.log("login", req.body)
+//     try {
+//         const { email, password } = req.body
+//         const existingUser = await User.findOne({ email, password }).exec()
+//         if (!existingUser) {
+//             res.status(400).send("User or Password Invalid")
+//             return;
+//         }
 
-        res.json({ token: jwt.sign({ email }, process.env.SECRET, { expiresIn: "2h" }) })
+//         res.json({ token: jwt.sign({ email }, process.env.SECRET, { expiresIn: "2h" }) })
 
-    } catch (error) {
-        console.log("Error: ", error)
-        res.status(500).send(error)
-    }
-})
+//     } catch (error) {
+//         console.log("Error: ", error)
+//         res.status(500).send(error)
+//     }
+// })
 
 router.post('/getAvailableBookings', async (req, res) => {
     const { meetingDate, fromTime, toTime, numberOfParticipants } = req.body
