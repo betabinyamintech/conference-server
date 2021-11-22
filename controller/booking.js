@@ -1,10 +1,11 @@
 var express = require('express')
 var router = express.Router()
-const booking = require('../model/booking')
-const { create } = require('../model/booking')
+const User = require('../model/user')
+const Booking = require('../model/booking')
 const Room = require('../model/room')
 var moment = require('moment'); // require
 const { verifyToken } = require('../middleware/verifyToken')
+var nodemailer = require('nodemailer');
 
 
 // router.post('/login', async (req, res) => {
@@ -35,7 +36,7 @@ router.post('/getAvailableBookings', async (req, res) => {
         const rooms = await Room.find({ maxOfPeople: { $gte: numberOfParticipants } })
             .sort({ maxOfPeople: 1 }).exec()
         console.log("date ", meetingDate)
-        const bookings = await booking.find({
+        const bookings = await Booking.find({
             meetingDate: meetingDate,
             fromTime: {
                 $lte: toTimeMoment.clone().add(beforeAfterHours, 'h').unix(),
@@ -94,20 +95,52 @@ router.post('/getAvailableBookings', async (req, res) => {
 
 router.post('/bookingcommitRequest', verifyToken, async (req, res) => {
     const bookingDetails = req.body
-    console.log("bookingDetails ", bookingDetails)
+    let stringDate = moment(bookingDetails.meetingDate, 'YYYYMMDD').format('l')
+    let day = moment(bookingDetails.meetingDate, 'YYYYMMDD').format('dddd')
+    let fromTime=moment.unix(bookingDetails.startTime).format('HHmm')
+    let toTime=moment.unix(bookingDetails.endTime).format('HHmm')
+    let toTimeString=toTime.slice(0, 2) + ":" + toTime.slice(2);
+    let fromTimeString=fromTime.slice(0, 2) + ":" + fromTime.slice(2);
+    let room= await Room.find({_id:bookingDetails.roomId}).populate('name').exec()
+    console.log("room",room)
+    var os=require('os')
+    console.log( "yes i am the user",req.user)
+    console.log(bookingDetails)
     try {
-        await booking.create({...bookingDetails, owner: req.user._id, logDete:moment()})
+        await Booking.create({...bookingDetails, owner: req.user._id, logDate:moment()})
+        var transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+              user: 'binyamintech7@gmail.com',
+              pass: 'bootcamp123'
+            }
+          });
+          
+          var mailOptions = {
+            from: 'binyamintech7@gmail.com',
+            to: req.user.email,
+            subject: '!נקבעה לך פגישה בבנימין טק',
+            text: 'היי '+ req.user.name + os.EOL+' שריינו לך פגישה ביום '+stringDate+','+day+ os.EOL+' בין השעות: '+fromTimeString+'-'+toTimeString+os.EOL+' בחדר '+room[0].name+os.EOL+'מתרגשים להיפגש!'
+          };
+          
+          transporter.sendMail(mailOptions, function(error, info){
+            if (error) {
+              console.log("problem in sending mail ",error);
+            } else {
+              console.log('Email sent: ' + info.response);
+            }
+          });
         res.json("booking created")
     } catch (err) {
             res.send(" an error was  found while creating the booking", err)
     }
 })
 
-router.get('/user', async (req, res) => {
+router.get('/user',verifyToken, async (req, res) => {
     console.log("I am trying the server")
-    console.log(req.body.user)
+    console.log("user fromToken:",req.user)
     try {
-        const bookingOfUser = await Booking.find({ owner: req.body.user })
+        const bookingOfUser = await Booking.find({ owner: req.user._id })
         console.log("bookingOfUser", bookingOfUser)
         res.send(bookingOfUser);
         // console.log('res.body',res);
