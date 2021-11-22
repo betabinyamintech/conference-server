@@ -7,6 +7,8 @@ const phoneVerification = require('../model/phoneVerification')
 const Subscribers = require('../model/subscribers')
 const { verifyToken } = require('../middleware/verifyToken')
 const jwt = require('jsonwebtoken')
+const { Sms019 } = require('./sendMessageDinamic/Sms019')
+// import { login } from "../actions/auth"
 
 router.post('/register', async (req, res) => {
     try {
@@ -179,7 +181,7 @@ router.get('/sendVerification', async (req, res) => {
     const { phone } = req.query
     //מגריל מספר כלשהו בין 0 ל1 ואז כשמכפילים אותו ב10000 זה מעביר 4 ספרות ללפני הנקודה ואח"כ מוחקים את הספרות שאחרי הנקודה
     let code = Math.floor(Math.random() * 10000)
-
+    Sms019();
     // מוסיף את הפלאפון והסיסמה לטבלת פונ וריפיכישנ
     await phoneVerification.create({ phone, code })
     console.log("auth - sendVerification: add the code: ", code, "to database. with phone: ", phone)
