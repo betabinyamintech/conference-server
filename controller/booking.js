@@ -107,7 +107,7 @@ router.post('/bookingcommitRequest', verifyToken, async (req, res) => {
     console.log( "yes i am the user",req.user)
     console.log(bookingDetails)
     try {
-        await Booking.create({...bookingDetails, owner: req.user._id, logDete:moment()})
+        await Booking.create({...bookingDetails, owner: req.user._id, logDate:moment()})
         var transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
