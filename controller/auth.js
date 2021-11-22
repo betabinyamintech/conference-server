@@ -122,7 +122,7 @@ router.post('/checkIfSubscriberRequest', verifyToken, async (req, res) => {
 
     if (subscriber)
 
-        return res.json(subscriber)
+        return res.json(subscriber.coinsBalance)
     else
         return res.json(-1)
 
