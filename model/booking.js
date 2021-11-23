@@ -32,6 +32,9 @@ const bookingSchema=new Schema({
     },
     url:{
         type:String,
+    },
+    bookValue:{
+        type:Number,
     }
 }) 
 module.exports=mongoose.model('booking',bookingSchema)

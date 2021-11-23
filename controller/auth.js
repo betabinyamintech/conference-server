@@ -128,8 +128,6 @@ router.post('/checkIfSubscriberRequest', verifyToken, async (req, res) => {
 router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
     const { bookingDetails } = req.body
     let subscriber = []
-    console.log("IfSubscriberPay", bookingDetails)
-    const { roomId } = bookingDetails
     const userDetails = await User.find({ _id: req.user._id })
     if (userDetails) {
         subscriber = await Subscribers.find({ phone: userDetails[0].phone })
@@ -138,11 +136,8 @@ router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
         return res.send("error. not found user", err)
     if (subscriber.length != 0) {
         console.log("no", subscriber)
-        const room = await Room.find({ _id: roomId })
-        console.log("room", room)
-        if (room)
-            if (room[0].value <= subscriber[0].coinsBalance) {
-                let coins = subscriber[0].coinsBalance - room[0].value
+            if (bookingDetails.bookValue <= subscriber[0].coinsBalance) {
+                let coins = subscriber[0].coinsBalance - bookingDetails.bookValue
                 await Subscribers.updateOne(
                     { _id: subscriber[0]._id },
                     {
@@ -152,9 +147,6 @@ router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
             }
             else
                 return res.json("-1")
-        else
-            return res.send("error. not found user", err)
-
         return res.json(subscriber)
     }
     else {

@@ -67,7 +67,7 @@ router.post('/getAvailableBookings', async (req, res) => {
                     startTime: fromTimeMoment.clone().add(15 * direction * numOfTrys, 'm').unix(),
                     endTime: toTimeMoment.clone().add(15 * direction * numOfTrys, 'm').unix()
                 }
-                
+                console.log("options: "+option," i: "+i+ " numOfTrys: "+numOfTrys)
                 if (available(option)) {
                     console.log("options: "+option," i: "+i+ " numOfTrys: "+numOfTrys)
                     if (i == 0 && numOfTrys == 0) {
