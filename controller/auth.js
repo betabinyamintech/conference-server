@@ -128,8 +128,6 @@ router.post('/checkIfSubscriberRequest', verifyToken, async (req, res) => {
 router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
     const { bookingDetails } = req.body
     let subscriber = []
-    console.log("IfSubscriberPay", bookingDetails)
-    const { roomId } = bookingDetails
     const userDetails = await User.find({ _id: req.user._id })
     if (userDetails) {
         subscriber = await Subscribers.find({ phone: userDetails[0].phone })
@@ -138,11 +136,8 @@ router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
         return res.send("error. not found user", err)
     if (subscriber.length != 0) {
         console.log("no", subscriber)
-        const room = await Room.find({ _id: roomId })
-        console.log("room", room)
-        if (room)
-            if (room[0].value <= subscriber[0].coinsBalance) {
-                let coins = subscriber[0].coinsBalance - room[0].value
+            if (bookingDetails.bookValue <= subscriber[0].coinsBalance) {
+                let coins = subscriber[0].coinsBalance - bookingDetails.bookValue
                 await Subscribers.updateOne(
                     { _id: subscriber[0]._id },
                     {
@@ -152,9 +147,6 @@ router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
             }
             else
                 return res.json("-1")
-        else
-            return res.send("error. not found user", err)
-
         return res.json(subscriber)
     }
     else {
@@ -175,8 +167,8 @@ router.get('/sendVerification', async (req, res) => {
     const { phone } = req.query
     //מגריל מספר כלשהו בין 0 ל1 ואז כשמכפילים אותו ב10000 זה מעביר 4 ספרות ללפני הנקודה ואח"כ מוחקים את הספרות שאחרי הנקודה
     let code = Math.floor((Math.random() * 10000)+1000)
-   
-    const message= code+ " הוא קוד האימות שלך. \nהקוד ישמש אותך בהמשך התהליך. בנימין טק."
+    
+     const message= code+ " הוא קוד האימות שלך. \nהקוד ישמש אותך בהמשך התהליך. בנימין טק."
     // "0528693039"
     Sms019.sendMessage(message,phone)
     // מוסיף את הפלאפון והסיסמה לטבלת פונ וריפיכישנ
