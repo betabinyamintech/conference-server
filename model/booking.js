@@ -29,6 +29,9 @@ const bookingSchema=new Schema({
     PayMethod:{
         type:mongoose.Types.ObjectId,
         ref:'payMethod'
+    },
+    url:{
+        type:String,
     }
 }) 
 module.exports=mongoose.model('booking',bookingSchema)

@@ -8,9 +8,9 @@ const Subscribers = require('../model/subscribers')
 const { verifyToken } = require('../middleware/verifyToken')
 const jwt = require('jsonwebtoken')
 
+
 const axios = require("axios");
-// const {Sms019}  = require('./sendMessageDinamic.js')
-// import { login } from "../actions/auth"
+
 
 router.post('/register', async (req, res) => {
     try {

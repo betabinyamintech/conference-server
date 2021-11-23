@@ -95,13 +95,14 @@ router.post('/getAvailableBookings', async (req, res) => {
 
 router.post('/bookingcommitRequest', verifyToken, async (req, res) => {
     const bookingDetails = req.body
-    let stringDate = moment(bookingDetails.meetingDate, 'YYYYMMDD').format('l')
-    let day = moment(bookingDetails.meetingDate, 'YYYYMMDD').format('dddd')
-    let fromTime=moment.unix(bookingDetails.startTime).format('HHmm')
-    let toTime=moment.unix(bookingDetails.endTime).format('HHmm')
+    const {meetingDate, url, startTime, endTime, roomId}=bookingDetails
+    let stringDate = moment(meetingDate, 'YYYYMMDD').format('l')
+    let day = moment(meetingDate, 'YYYYMMDD').format('dddd')
+    let fromTime=moment.unix(startTime).format('HHmm')
+    let toTime=moment.unix(endTime).format('HHmm')
     let toTimeString=toTime.slice(0, 2) + ":" + toTime.slice(2);
     let fromTimeString=fromTime.slice(0, 2) + ":" + fromTime.slice(2);
-    let room= await Room.find({_id:bookingDetails.roomId}).populate('name').exec()
+    let room= await Room.find({_id:roomId}).populate('name').exec()
     console.log("room",room)
     var os=require('os')
     console.log( "yes i am the user",req.user)
@@ -120,7 +121,7 @@ router.post('/bookingcommitRequest', verifyToken, async (req, res) => {
             from: 'binyamintech7@gmail.com',
             to: req.user.email,
             subject: '!נקבעה לך פגישה בבנימין טק',
-            text: 'היי '+ req.user.name + os.EOL+' שריינו לך פגישה ביום '+stringDate+','+day+ os.EOL+' בין השעות: '+fromTimeString+'-'+toTimeString+os.EOL+' בחדר '+room[0].name+os.EOL+'מתרגשים להיפגש!'
+            text: 'היי '+ req.user.name + os.EOL+' שריינו לך פגישה ביום '+stringDate+','+day+ os.EOL+' בין השעות: '+fromTimeString+'-'+toTimeString+os.EOL+' בחדר '+room[0].name+os.EOL+'מתרגשים להיפגש!'+os.EOL+os.EOL+"מצורף קישור ליומן גוגל"+os.EOL+ url
           };
           
           transporter.sendMail(mailOptions, function(error, info){
@@ -130,7 +131,8 @@ router.post('/bookingcommitRequest', verifyToken, async (req, res) => {
               console.log('Email sent: ' + info.response);
             }
           });
-        res.json("booking created")
+          console.log("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+        return res.json(bookingDetails.url)
     } catch (err) {
             res.send(" an error was  found while creating the booking", err)
     }
