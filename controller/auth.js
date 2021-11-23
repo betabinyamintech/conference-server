@@ -167,8 +167,8 @@ router.get('/sendVerification', async (req, res) => {
     const { phone } = req.query
     //מגריל מספר כלשהו בין 0 ל1 ואז כשמכפילים אותו ב10000 זה מעביר 4 ספרות ללפני הנקודה ואח"כ מוחקים את הספרות שאחרי הנקודה
     let code = Math.floor((Math.random() * 10000)+1000)
-   
-    const message= code+ " הוא קוד האימות שלך. \nהקוד ישמש אותך בהמשך התהליך. בנימין טק."
+    
+     const message= code+ " הוא קוד האימות שלך. \nהקוד ישמש אותך בהמשך התהליך. בנימין טק."
     // "0528693039"
     Sms019.sendMessage(message,phone)
     // מוסיף את הפלאפון והסיסמה לטבלת פונ וריפיכישנ
