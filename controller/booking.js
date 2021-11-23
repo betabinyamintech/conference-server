@@ -152,6 +152,22 @@ router.get('/user',verifyToken, async (req, res) => {
     }
 
 })
+
+router.get('/rooms',verifyToken, async (req, res) => {
+    console.log("I am trying rooms")
+    console.log("user fromToken:",req.user)
+    try {
+        const rooms = await rooms.find({})
+        console.log("rooms", rooms)
+        res.send(rooms);
+        // console.log('res.body',res);
+        return res
+    }
+    catch (err) {
+        return res.status(500).send(" an error was  found while searching for rooms ", err)
+    }
+
+})
 module.exports = router
 
 

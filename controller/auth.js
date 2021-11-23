@@ -9,7 +9,7 @@ const { verifyToken } = require('../middleware/verifyToken')
 const jwt = require('jsonwebtoken')
 
 
-const axios = require("axios");
+
 
 
 router.post('/register', async (req, res) => {
