@@ -131,7 +131,6 @@ router.post('/bookingcommitRequest', verifyToken, async (req, res) => {
               console.log('Email sent: ' + info.response);
             }
           });
-          console.log("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
         return res.json(bookingDetails.url)
     } catch (err) {
             res.send(" an error was  found while creating the booking", err)
