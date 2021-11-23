@@ -7,7 +7,9 @@ const phoneVerification = require('../model/phoneVerification')
 const Subscribers = require('../model/subscribers')
 const { verifyToken } = require('../middleware/verifyToken')
 const jwt = require('jsonwebtoken')
-const { Sms019 } = require('./sendMessageDinamic/Sms019')
+
+const axios = require("axios");
+// const {Sms019}  = require('./sendMessageDinamic.js')
 // import { login } from "../actions/auth"
 
 router.post('/register', async (req, res) => {
@@ -38,14 +40,12 @@ router.post('/register', async (req, res) => {
         if (existingEmail) {
             return res.status(400).send("User with this e-mail already exists")
         }
-
         console.log("creaeting user", req.body)
         const newUser = await User.create(req.body)
         //jwt - Json web token  מצפין האימייל בתוקן
         res.json({ token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }) })
         return res;
     }
-
     catch (error) {
         console.log("Error: ", error)
         res.status(500).send(error)
@@ -62,8 +62,6 @@ router.post('/login', async (req, res) => {
             return;
         }
         const { phone } = existingUser
-
-
         res.json({ token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }) })
     } catch (error) {
         console.log("Error: ", error)
@@ -79,7 +77,6 @@ router.post('/loginOtp', async (req, res) => {
             res.status(400).send("phone verification failed")
             return;
         }
-
         res.json({ token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }) })
     } catch (error) {
         console.log("Error: ", error)
@@ -108,7 +105,6 @@ router.post('/bookingOfUserRequest', async (req, res) => {
     catch (err) {
         return res.status(500).send(" an error was  found while searching for booking ", err)
     }
-
 })
 
 router.post('/checkIfSubscriberRequest', verifyToken, async (req, res) => {
@@ -123,7 +119,6 @@ router.post('/checkIfSubscriberRequest', verifyToken, async (req, res) => {
     res.send("error. not found user", err)
 
     if (subscriber)
-
         return res.json(subscriber.coinsBalance)
     else
         return res.json(-1)
@@ -166,7 +161,6 @@ router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
         console.log("yes")
         return res.json("-1")
     }
-
 })
 
 function pad(num, size) {
@@ -180,8 +174,11 @@ router.get('/sendVerification', async (req, res) => {
     console.log("auth - sendVerification: req.query", req.query)
     const { phone } = req.query
     //מגריל מספר כלשהו בין 0 ל1 ואז כשמכפילים אותו ב10000 זה מעביר 4 ספרות ללפני הנקודה ואח"כ מוחקים את הספרות שאחרי הנקודה
-    let code = Math.floor(Math.random() * 10000)
-    Sms019();
+    let code = Math.floor((Math.random() * 10000)+1000)
+   
+    const message= code+ " הוא קוד האימות שלך. \nהקוד ישמש אותך בהמשך התהליך. בנימין טק."
+    // "0528693039"
+    Sms019.sendMessage(message,phone)
     // מוסיף את הפלאפון והסיסמה לטבלת פונ וריפיכישנ
     await phoneVerification.create({ phone, code })
     console.log("auth - sendVerification: add the code: ", code, "to database. with phone: ", phone)
@@ -211,5 +208,59 @@ async function verifyPhoneCode(phone, code) {
     return false
 
 }
+
+
+const Sms019= {
+   
+
+    sendMessage: async (message, toNumber) => {
+
+        let postBody = `
+          <?xml version="1.0" encoding="UTF-8"?>
+          <sms>
+          <user>
+          <username>חבלבנימין</username>
+          <password>Binyamin1234</password>
+          </user>
+          <source>Clinic Team</source>
+          <destinations>
+          <phone>${toNumber}</phone>
+      </destinations>
+      <message>${message}</message>
+          </sms>`;
+    
+        let config = {
+          headers: { "Content-Type": "text/xml" },
+        };
+    
+        return axios.post("https://www.019sms.co.il/api", postBody, config);
+      },
+    
+      sendMessageDinamic: async (message, toNumber) => {
+        let postBody = `
+          <?xml version="1.0" encoding="UTF-8"?>
+          <sms>
+          <user>
+          <username>חבלבנימין</username>
+          <password>Binyamin1234</password>
+          </user>
+          <source>Clinic Team</source>
+          <destinations>
+          <phone>${toNumber}</phone>
+          </destinations>
+          <message>${message}</message>
+          </sms>`;
+    
+        let config = {
+          headers: { "Content-Type": "text/xml" },
+        };
+    
+        return axios.post("https://www.019sms.co.il/api", postBody, config);
+      },
+
+}
+
+
+
 
 module.exports = router
