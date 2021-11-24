@@ -136,17 +136,17 @@ router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
         return res.send("error. not found user", err)
     if (subscriber.length != 0) {
         console.log("no", subscriber)
-            if (bookingDetails.bookValue <= subscriber[0].coinsBalance) {
-                let coins = subscriber[0].coinsBalance - bookingDetails.bookValue
-                await Subscribers.updateOne(
-                    { _id: subscriber[0]._id },
-                    {
-                        $set: { "coinsBalance": coins }
-                    }
-                )
-            }
-            else
-                return res.json("-1")
+        if (bookingDetails.bookValue <= subscriber[0].coinsBalance) {
+            let coins = subscriber[0].coinsBalance - bookingDetails.bookValue
+            await Subscribers.updateOne(
+                { _id: subscriber[0]._id },
+                {
+                    $set: { "coinsBalance": coins }
+                }
+            )
+        }
+        else
+            return res.json("-1")
         return res.json(subscriber)
     }
     else {
@@ -166,11 +166,11 @@ router.get('/sendVerification', async (req, res) => {
     console.log("auth - sendVerification: req.query", req.query)
     const { phone } = req.query
     //מגריל מספר כלשהו בין 0 ל1 ואז כשמכפילים אותו ב10000 זה מעביר 4 ספרות ללפני הנקודה ואח"כ מוחקים את הספרות שאחרי הנקודה
-    let code = Math.floor((Math.random() * 10000)+1000)
-    
-     const message= code+ " הוא קוד האימות שלך. \nהקוד ישמש אותך בהמשך התהליך. בנימין טק."
+    let code = Math.floor((Math.random() * 10000) + 1000)
+
+    const message = code + " הוא קוד האימות שלך. \nהקוד ישמש אותך בהמשך התהליך. בנימין טק."
     // "0528693039"
-    Sms019.sendMessage(message,phone)
+    Sms019.sendMessage(message, phone)
     // מוסיף את הפלאפון והסיסמה לטבלת פונ וריפיכישנ
     await phoneVerification.create({ phone, code })
     console.log("auth - sendVerification: add the code: ", code, "to database. with phone: ", phone)
@@ -202,8 +202,8 @@ async function verifyPhoneCode(phone, code) {
 }
 
 
-const Sms019= {
-   
+const Sms019 = {
+
 
     sendMessage: async (message, toNumber) => {
 
@@ -220,15 +220,15 @@ const Sms019= {
       </destinations>
       <message>${message}</message>
           </sms>`;
-    
+
         let config = {
-          headers: { "Content-Type": "text/xml" },
+            headers: { "Content-Type": "text/xml" },
         };
-    
+
         return axios.post("https://www.019sms.co.il/api", postBody, config);
-      },
-    
-      sendMessageDinamic: async (message, toNumber) => {
+    },
+
+    sendMessageDinamic: async (message, toNumber) => {
         let postBody = `
           <?xml version="1.0" encoding="UTF-8"?>
           <sms>
@@ -242,17 +242,14 @@ const Sms019= {
           </destinations>
           <message>${message}</message>
           </sms>`;
-    
+
         let config = {
-          headers: { "Content-Type": "text/xml" },
+            headers: { "Content-Type": "text/xml" },
         };
-    
+
         return axios.post("https://www.019sms.co.il/api", postBody, config);
-      },
+    },
 
 }
-
-
-
 
 module.exports = router
