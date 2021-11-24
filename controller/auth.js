@@ -1,7 +1,6 @@
 var express = require('express')
 var router = express.Router()
 const User = require('../model/user')
-const Room = require('../model/room')
 const Booking = require('../model/booking')
 const phoneVerification = require('../model/phoneVerification')
 const Subscribers = require('../model/subscribers')
@@ -251,8 +250,5 @@ const Sms019 = {
     },
 
 }
-
-
-
 
 module.exports = router
