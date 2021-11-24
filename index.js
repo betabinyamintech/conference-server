@@ -19,7 +19,7 @@ mongoose.connect(process.env.DATABASE_CONNECTION)
         console.log("mongo connection error: " + err)
     })
 
-const port = process.env.PORT
+const port = process.env.PORT || 80
 const server = app.listen(port, () => {
     console.log("server is listening at port ", port)
 })
