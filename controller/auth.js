@@ -84,11 +84,12 @@ router.post('/loginOtp', async (req, res) => {
 })
 
 router.get('/user', verifyToken, async (req, res) => {
-    res.json(req.user)
-})
-
-router.get('/', verifyToken, async (req, res) => {
-    return res.json(req.user)
+    const subscriber = await Subscribers.findOne({ phone: req.user.phone }).exec()
+    console.log('subscriber', subscriber)
+    const subscription = subscriber ? { balance: subscriber.coinsBalance } : null
+    const userDetails = { ...req.user, subscription: subscription }
+    console.log('userDetails', userDetails)
+    return res.json(userDetails)
 })
 
 router.post('/bookingOfUserRequest', async (req, res) => {
@@ -106,23 +107,6 @@ router.post('/bookingOfUserRequest', async (req, res) => {
     }
 })
 
-router.post('/checkIfSubscriberRequest', verifyToken, async (req, res) => {
-
-    const { bookingDetails } = req.body
-    let subscriber = ""
-    const userDetails = await User.find({ _id: req.user._id })
-    if (userDetails)
-        subscriber = await Subscribers.find({ phone: userDetails.phone })
-    else
-        return
-    res.send("error. not found user", err)
-
-    if (subscriber)
-        return res.json(subscriber.coinsBalance)
-    else
-        return res.json(-1)
-
-})
 
 router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
     const { bookingDetails } = req.body

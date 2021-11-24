@@ -7,7 +7,7 @@ const verifyToken = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET)
-        const user = await User.findOne({ phone: decoded.phone }).exec()
+        const user = (await User.findOne({ phone: decoded.phone }).exec()).toObject()
         delete user.password
         req.user = user
         console.log('authorization user', req.user)
@@ -20,4 +20,4 @@ const verifyToken = async (req, res, next) => {
     // hide the password
 }
 
-module.exports = {verifyToken}
+module.exports = { verifyToken }
