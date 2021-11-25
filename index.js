@@ -4,8 +4,7 @@ const mongoose = require('mongoose')
 const app = express()
 const cors = require('cors')
 
-
-var whitelist = ['http://rooms.binyamintech.co.il', 'http://localhost:3000']
+var whitelist = ['https://rooms.binyamintech.co.il', 'http://localhost:3000']
 var corsOptionsDelegate = function (req, callback) {
     var corsOptions;
     if (whitelist.indexOf(req.header('Origin')) !== -1) {
