@@ -67,7 +67,7 @@ router.post('/getAvailableBookings', async (req, res) => {
                     startTime: fromTimeMoment.clone().add(15 * direction * numOfTrys, 'm').unix(),
                     endTime: toTimeMoment.clone().add(15 * direction * numOfTrys, 'm').unix()
                 }
-                console.log("options: "+option," i: "+i+ " numOfTrys: "+numOfTrys)
+                
                 if (available(option)) {
                     console.log("options: "+option," i: "+i+ " numOfTrys: "+numOfTrys)
                     if (i == 0 && numOfTrys == 0) {
@@ -81,12 +81,12 @@ router.post('/getAvailableBookings', async (req, res) => {
             }
         }
 
-        if (options.length == 0) {
-            res.status(400).send("no alternatives options")
-            return;
-        }
+        // if (options.length == 0) {
+        //     res.status(400).send("no alternatives options")
+        //     return;
+        // }
  
-         
+        console.log("options: "+options, " numOfTrys: "+numOfTrys)
         return res.json({ alternatives: options });  
     } catch (error) {
         res.status(500).send(error)
