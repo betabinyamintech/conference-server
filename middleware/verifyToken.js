@@ -3,7 +3,7 @@ const User = require('../model/user')
 
 const verifyToken = async (req, res, next) => {
     const token = req.headers.authorization
-    console.log('verify token ', token)
+    console.log('verify token: ', token)
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET)

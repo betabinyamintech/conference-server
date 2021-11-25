@@ -13,13 +13,22 @@ const axios = require('axios')
 
 router.post('/register', async (req, res) => {
     try {
-        console.log("auth - register: body: req.body", { body: req.body })
         const { phone, email, password, code } = req.body
-
-        if (!verifyPhoneCode(phone, code)) {
-            res.status(400).send("phone verification failed")
+        const last_phoneVerification = await phoneVerification.findOne({ phone }).sort({ timestamp: 'descending' })
+        if (!last_phoneVerification || last_phoneVerification.code != code) {
+           return res.status(400).send("phone verification failed")
         }
-
+        else {
+            //  delete all phoneVerification with the same phone
+            phoneVerification.deleteMany({ phone }).then(function () {
+                console.log("auth - verifyPhoneCode delete all the same phone succed"); // Success
+            }).catch(function (error) {
+                console.log("auth - verifyPhoneCode delete all the same phone faile. error:", error); // Failure
+            });
+        }
+        // if (!verifyPhoneCode(phone, code)) {
+        //     res.status(400).send("phone verification failed")
+        // }
         if (email == null || password == null) {
             res.status(400).send("email or password missing")
             return res;
@@ -68,20 +77,7 @@ router.post('/login', async (req, res) => {
     }
 })
 
-router.post('/loginOtp', async (req, res) => {
-    console.log("loginOtp", req.body)
-    try {
-        const { phone, code } = req.body
-        if (!verifyPhoneCode(phone, code)) {
-            res.status(400).send("phone verification failed")
-            return;
-        }
-        res.json({ token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }) })
-    } catch (error) {
-        console.log("Error: ", error)
-        res.status(500).send(error)
-    }
-})
+
 
 router.get('/user', verifyToken, async (req, res) => {
     const subscriber = await Subscribers.findOne({ phone: req.user.phone }).exec()
@@ -146,44 +142,36 @@ function pad(num, size) {
 
 //send password to phone
 router.get('/sendVerification', async (req, res) => {
-    console.log("auth - sendVerification: req.query", req.query)
     const { phone } = req.query
     //מגריל מספר כלשהו בין 0 ל1 ואז כשמכפילים אותו ב10000 זה מעביר 4 ספרות ללפני הנקודה ואח"כ מוחקים את הספרות שאחרי הנקודה
     let code = Math.floor((Math.random() * 9000) + 1000)
-
     const message = code + " הוא קוד האימות שלך. \nהקוד ישמש אותך בהמשך התהליך. בנימין טק."
-    // "0528693039"
     Sms019.sendMessage(message, phone)
-    // מוסיף את הפלאפון והסיסמה לטבלת פונ וריפיכישנ
     await phoneVerification.create({ phone, code })
     console.log("auth - sendVerification: add the code: ", code, "to database. with phone: ", phone)
-    //צריך לעשות פונקציה ששולחת לפאלפון את הסיסמה
-    //יש לעשות בדיקה האם זה אכן הצליח לשלוח
     return res.json()
 })
-
-// מקבל סיסמה ופלאפון ובודק אם היא זהה לזו ששלח באס אמ אס
-async function verifyPhoneCode(phone, code) {
-    console.log("auth - verifyCode get the phone: ", phone, " & code: ", code)
-
-    const last_phoneVerification = await phoneVerification.findOne({ phone }).sort({ timestamp: 'descending' })
-    console.log("the last_phoneVerification is :", last_phoneVerification)
-    if (last_phoneVerification != null && last_phoneVerification.code == code) {
-        //  מוחק את כל הסיסמאות ששמורות עם הפאלפון הזה
-        phoneVerification.deleteMany({ phone }).then(function () {
-            console.log("auth - sendVerification delete all the same phone succed"); // Success
-        }).catch(function (error) {
-            console.log("auth - sendVerification delete all the same phone faile. error:", error); // Failure
-        });
-
-        return true
+// compares client code to phoneVerification code
+router.post('/verifyPhoneCode', async (req, res) => {
+    try {
+        const { phone, code } = req.body
+        const last_phoneVerification = await phoneVerification.findOne({ phone }).sort({ timestamp: 'descending' })
+        if (last_phoneVerification != null && last_phoneVerification.code == code) {
+            //  delete all phoneVerification with the same phone
+            phoneVerification.deleteMany({ phone }).then(function () {
+                console.log("auth - verifyPhoneCode delete all the same phone succed"); // Success
+            }).catch(function (error) {
+                console.log("auth - verifyPhoneCode delete all the same phone faile. error:", error); // Failure
+            });
+           return res.json({ token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }) })
+           
+        }
+      return  res.status(400).send("phone verification failed")
+    } catch (error) {
+        console.log("Error: ", error)
+        res.status(500).send(error)
     }
-
-    //לאחר שהסיסמאות זהות יכול למחוק את כל הסיסמאות מהדתא בייס ששיכות לפאלפון הזה בלבד
-    return false
-
-}
-
+})
 
 const Sms019 = {
 
