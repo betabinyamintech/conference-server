@@ -29,8 +29,8 @@ var nodemailer = require('nodemailer');
 router.post('/getAvailableBookings', async (req, res) => {
     const { meetingDate, fromTime, toTime, numberOfParticipants } = req.body
     try {
-        let fromTimeMoment = moment(meetingDate +"T"+ fromTime)
-        let toTimeMoment = moment(meetingDate +"T"+ toTime)
+        let fromTimeMoment = moment(meetingDate + "T" + fromTime)
+        let toTimeMoment = moment(meetingDate + "T" + toTime)
         let beforeAfterHours = 2
         let i = 0
         const rooms = await Room.find({ maxOfPeople: { $gte: numberOfParticipants } })
@@ -44,9 +44,9 @@ router.post('/getAvailableBookings', async (req, res) => {
             toTime: {
                 $gte: fromTimeMoment.clone().subtract(beforeAfterHours, 'h').unix(),
             },
-             roomId: { $in: rooms.map((room) => room._id)}
+            roomId: { $in: rooms.map((room) => room._id) }
         }).exec();
-        console.log("bookings ",bookings)
+        console.log("bookings ", bookings)
         let numOfTrys = 0
         let options = []
 
@@ -57,7 +57,7 @@ router.post('/getAvailableBookings', async (req, res) => {
             )) == null
 
         for (i = 0; i < rooms.length; i++) {
-            
+
             while (options.length < 3 && numOfTrys <= beforeAfterHours * (60 / 15) * 2) {
                 const direction = numOfTrys % 2 ? 1 : -1
                 const option = {
@@ -67,16 +67,16 @@ router.post('/getAvailableBookings', async (req, res) => {
                     startTime: fromTimeMoment.clone().add(15 * direction * numOfTrys, 'm').unix(),
                     endTime: toTimeMoment.clone().add(15 * direction * numOfTrys, 'm').unix()
                 }
-                
+
                 if (available(option)) {
-                    console.log("options: "+option," i: "+i+ " numOfTrys: "+numOfTrys)
+                    console.log("options: " + option, " i: " + i + " numOfTrys: " + numOfTrys)
                     if (i == 0 && numOfTrys == 0) {
                         console.log("return")
                         return res.json({ exact: option })
                     }
                     options.push(option)
                 }
-                
+
                 numOfTrys++
             }
         }
@@ -85,9 +85,9 @@ router.post('/getAvailableBookings', async (req, res) => {
         //     res.status(400).send("no alternatives options")
         //     return;
         // }
- 
-        console.log("options: "+options, " numOfTrys: "+numOfTrys)
-        return res.json({ alternatives: options });  
+
+        console.log("options: " + options, " numOfTrys: " + numOfTrys)
+        return res.json({ alternatives: options });
     } catch (error) {
         res.status(500).send(error)
     }
@@ -95,51 +95,51 @@ router.post('/getAvailableBookings', async (req, res) => {
 
 router.post('/bookingcommitRequest', verifyToken, async (req, res) => {
     const bookingDetails = req.body
-    const {meetingDate, url, startTime, endTime, roomId}=bookingDetails
+    const { meetingDate, url, startTime, endTime, roomId } = bookingDetails
     let stringDate = moment(meetingDate, 'YYYYMMDD').format('l')
     let day = moment(meetingDate, 'YYYYMMDD').format('dddd')
-    let fromTime=moment.unix(startTime).format('HHmm')
-    let toTime=moment.unix(endTime).format('HHmm')
-    let toTimeString=toTime.slice(0, 2) + ":" + toTime.slice(2);
-    let fromTimeString=fromTime.slice(0, 2) + ":" + fromTime.slice(2);
-    let room= await Room.find({_id:roomId}).populate('name').exec()
-    console.log("room",room)
-    var os=require('os')
-    console.log( "yes i am the user",req.user)
+    let fromTime = moment.unix(startTime).format('HHmm')
+    let toTime = moment.unix(endTime).format('HHmm')
+    let toTimeString = toTime.slice(0, 2) + ":" + toTime.slice(2);
+    let fromTimeString = fromTime.slice(0, 2) + ":" + fromTime.slice(2);
+    let room = await Room.find({ _id: roomId }).populate('name').exec()
+    console.log("room", room)
+    var os = require('os')
+    console.log("yes i am the user", req.user)
     console.log(bookingDetails)
     try {
-        await Booking.create({...bookingDetails, owner: req.user._id, logDate:moment()})
+        await Booking.create({ ...bookingDetails, owner: req.user._id, logDate: moment() })
         var transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-              user: 'binyamintech7@gmail.com',
-              pass: 'bootcamp123'
+                user: 'binyamintech7@gmail.com',
+                pass: 'bootcamp123'
             }
-          });
-          
-          var mailOptions = {
+        });
+
+        var mailOptions = {
             from: 'binyamintech7@gmail.com',
             to: req.user.email,
             subject: '!נקבעה לך פגישה בבנימין טק',
-            text: 'היי '+ req.user.name + os.EOL+' שריינו לך פגישה ביום '+stringDate+','+day+ os.EOL+' בין השעות: '+fromTimeString+'-'+toTimeString+os.EOL+' בחדר '+room[0].name+os.EOL+'מתרגשים להיפגש!'+os.EOL+os.EOL+"מצורף קישור ליומן גוגל"+os.EOL+ url
-          };
-          
-          transporter.sendMail(mailOptions, function(error, info){
+            text: 'היי ' + req.user.name + os.EOL + ' שריינו לך פגישה ביום ' + stringDate + ',' + day + os.EOL + ' בין השעות: ' + fromTimeString + '-' + toTimeString + os.EOL + ' בחדר ' + room[0].name + os.EOL + 'מתרגשים להיפגש!' + os.EOL + os.EOL + "מצורף קישור ליומן גוגל" + os.EOL + url
+        };
+
+        transporter.sendMail(mailOptions, function (error, info) {
             if (error) {
-              console.log("problem in sending mail ",error);
+                console.log("problem in sending mail ", error);
             } else {
-              console.log('Email sent: ' + info.response);
+                console.log('Email sent: ' + info.response);
             }
-          });
+        });
         return res.json(bookingDetails.url)
     } catch (err) {
-            res.send(" an error was  found while creating the booking", err)
+        res.send(" an error was  found while creating the booking", err)
     }
 })
 
-router.get('/user',verifyToken, async (req, res) => {
+router.get('/user', verifyToken, async (req, res) => {
     console.log("I am trying the server")
-    console.log("user fromToken:",req.user)
+    console.log("user fromToken:", req.user)
     try {
         const bookingOfUser = await Booking.find({ owner: req.user._id })
         console.log("bookingOfUser", bookingOfUser)
@@ -153,20 +153,34 @@ router.get('/user',verifyToken, async (req, res) => {
 
 })
 
-router.get('/rooms',verifyToken, async (req, res) => {
+router.get('/rooms', verifyToken, async (req, res) => {
     console.log("I am trying rooms")
-    console.log("user fromToken:",req.user)
+    console.log("user fromToken:", req.user)
     try {
-        const rooms = await rooms.find({})
-        console.log("rooms", rooms)
-        res.send(rooms);
-        // console.log('res.body',res);
+        const allRooms = await Room.find({})
+        console.log("rooms", allRooms)
+        res.json(allRooms);
         return res
     }
     catch (err) {
-        return res.status(500).send(" an error was  found while searching for rooms ", err)
+        return res.status(500).send(" an error was  found while searching for rooms ", err.massage)
     }
 
+})
+
+router.delete('/delete', verifyToken, async (req, res) => {
+    console.log("I  delete a  book")
+    console.log("req.body", req.body.bookId)
+    try {
+        const isDeleted = await Booking.findOneAndDelete({ _id: req.body.bookId })
+        console.log("isDeleted", isDeleted)
+        res.json(isDeleted);
+        return res
+    }
+    catch (err) {
+        return res.status(500).send(" an error was  found while deleting the meeting ", err.massage)
+    }
+    return res
 })
 module.exports = router
 
