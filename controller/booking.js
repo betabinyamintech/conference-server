@@ -3,9 +3,11 @@ var router = express.Router()
 const User = require('../model/user')
 const Booking = require('../model/booking')
 const Room = require('../model/room')
+const Subscriber = require('../model/subscribers')
 var moment = require('moment'); // require
 const { verifyToken } = require('../middleware/verifyToken')
 var nodemailer = require('nodemailer');
+const user = require('../model/user')
 
 
 // router.post('/login', async (req, res) => {
@@ -109,6 +111,7 @@ router.post('/bookingcommitRequest', verifyToken, async (req, res) => {
     console.log(bookingDetails)
     try {
         await Booking.create({ ...bookingDetails, owner: req.user._id, logDate: moment() })
+        // const updateBalance = await Subscriber.findOneAndUpdate({ phone: req.user.phone }, { $subtract: { coinsBalance: bookingDetails.bookValue } },{new:true})
         var transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
@@ -173,8 +176,10 @@ router.delete('/delete', verifyToken, async (req, res) => {
     console.log("req.body", req.body.bookId)
     try {
         const isDeleted = await Booking.findOneAndDelete({ _id: req.body.bookId })
-        console.log("isDeleted", isDeleted)
-        res.json(isDeleted);
+        if (isDeleted)
+            subDetails = await Subscriber.findOneAndUpdate({ phone: req.user.phone }, { $inc: { coinsBalance: isDeleted.bookValue } }, { new: true })
+        console.log("subDetails", subDetails)
+        res.json(subDetails);
         return res
     }
     catch (err) {

@@ -16,7 +16,7 @@ router.post('/register', async (req, res) => {
         const { phone, email, password, code } = req.body
         const last_phoneVerification = await phoneVerification.findOne({ phone }).sort({ timestamp: 'descending' })
         if (!last_phoneVerification || last_phoneVerification.code != code) {
-           return res.status(400).send("phone verification failed")
+            return res.status(400).send("phone verification failed")
         }
         else {
             //  delete all phoneVerification with the same phone
@@ -107,7 +107,9 @@ router.post('/bookingOfUserRequest', async (req, res) => {
 router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
     const { bookingDetails } = req.body
     let subscriber = []
+    let updateSubscriber
     const userDetails = await User.find({ _id: req.user._id })
+    console.log("userDetails", userDetails)
     if (userDetails) {
         subscriber = await Subscribers.find({ phone: userDetails[0].phone })
     }
@@ -117,16 +119,20 @@ router.post('/IfSubscriberPay', verifyToken, async (req, res) => {
         console.log("no", subscriber)
         if (bookingDetails.bookValue <= subscriber[0].coinsBalance) {
             let coins = subscriber[0].coinsBalance - bookingDetails.bookValue
-            await Subscribers.updateOne(
+            updateSubscriber = await Subscribers.findOneAndUpdate(
                 { _id: subscriber[0]._id },
                 {
                     $set: { "coinsBalance": coins }
+                },
+                {
+                    new: true
                 }
             )
+            console.log("updateSubscriber", updateSubscriber)
         }
         else
             return res.json("-1")
-        return res.json(subscriber)
+        return res.json(updateSubscriber)
     }
     else {
         console.log("yes")
@@ -163,10 +169,10 @@ router.post('/verifyPhoneCode', async (req, res) => {
             }).catch(function (error) {
                 console.log("auth - verifyPhoneCode delete all the same phone faile. error:", error); // Failure
             });
-           return res.json({ token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }) })
-           
+            return res.json({ token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }) })
+
         }
-      return  res.status(400).send("phone verification failed")
+        return res.status(400).send("phone verification failed")
     } catch (error) {
         console.log("Error: ", error)
         res.status(500).send(error)
