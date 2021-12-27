@@ -16,7 +16,7 @@ router.post('/register', async (req, res) => {
         const { phone, email, password, code } = req.body
         const last_phoneVerification = await phoneVerification.findOne({ phone }).sort({ timestamp: 'descending' })
         if (!last_phoneVerification || last_phoneVerification.code != code) {
-            return res.status(400).send("phone verification failed")
+            return res.status(400).json({ errorType: "אימות טלפון נכשל" })
         }
         else {
             //  delete all phoneVerification with the same phone
@@ -30,7 +30,7 @@ router.post('/register', async (req, res) => {
         //     res.status(400).send("phone verification failed")
         // }
         if (email == null || password == null) {
-            res.status(400).send("email or password missing")
+            res.status(400).json({ error: "email or password missing" })
             return res;
         }
         const minChars = 3
@@ -228,5 +228,17 @@ const Sms019 = {
     },
 
 }
+router.post('/resetPass', async (req, res) => {
+    const email = req.body.email
+    console.log("email", email)
+    let userExist = await User.find({ email: email })
+    if (userExist.length < 1) {
+        console.log("userExist", userExist)
+        return res.status(400).send("user is not exist")
+    }
+
+
+
+})
 
 module.exports = router
