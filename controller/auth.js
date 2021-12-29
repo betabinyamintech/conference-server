@@ -7,6 +7,8 @@ const Subscribers = require("../model/subscribers");
 const { verifyToken } = require("../middleware/verifyToken");
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
+var nodemailer = require("nodemailer");
+var os = require("os");
 
 router.post("/register", async (req, res) => {
     try {
@@ -32,9 +34,7 @@ router.post("/register", async (req, res) => {
                     ); // Failure
                 });
         }
-        // if (!verifyPhoneCode(phone, code)) {
-        //     res.status(400).send("phone verification failed")
-        // }
+
         if (email == null || password == null) {
             res.status(400).send("email or password missing");
             return res;
@@ -58,6 +58,10 @@ router.post("/register", async (req, res) => {
             return res.status(400).send("User with this e-mail already exists");
         }
         console.log("creating user", req.body);
+        const bcrypt = require('bcrypt');
+        const saltRounds = 10;
+        const myPlaintextPassword = 's0/\/\P4$$w0rD';
+        const someOtherPlaintextPassword = 'not_bacon';
         let requestBody = req.body;
         let newUserToSave = { ...requestBody, isRegistered: true };
         // console.log("user before save", newUserToSave);
@@ -278,7 +282,48 @@ router.post('/resetPass', async (req, res) => {
         console.log("userExist", userExist)
         return res.status(400).send("user is not exist")
     }
+    console.log("userExist", userExist)
+    let randomPassword = Math.random().toString(36).slice(-8);
+    console.log('randomPassword', randomPassword)
+    let newUser = await User.findByIdAndUpdate(userExist[0]._id, { password: randomPassword }, { new: true })
+    console.log("newUser", newUser)
+    let transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+            user: "binyamintech7@gmail.com",
+            pass: "bootcamp123",
+        },
+    });
 
+    var mailOptions = {
+        from: "binyamintech7@gmail.com",
+        to: userExist[0].email,
+        subject: "שכחת סיסמא?",
+        text:
+            "לא נורא " +
+            "," +
+            os.EOL +
+            " זה קורה לטובים ביותר " +
+            "!" +
+            os.EOL +
+            "מצורפת הסיסמא החדשה שלך " +
+            " :" +
+            randomPassword +
+            os.EOL +
+            "מחכים לך" +
+            os.EOL +
+            "צוות בנימיןטק"
+
+    };
+
+    transporter.sendMail(mailOptions, function (error, info) {
+        if (error) {
+            console.log("problem in sending mail ", error);
+        } else {
+            console.log("Email sent: " + info.response);
+        }
+    });
+    return res;
 
 
 })

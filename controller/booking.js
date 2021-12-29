@@ -8,24 +8,7 @@ var moment = require("moment"); // require
 const { verifyToken } = require("../middleware/verifyToken");
 var nodemailer = require("nodemailer");
 const user = require("../model/user");
-
-// router.post('/login', async (req, res) => {
-//     console.log("login", req.body)
-//     try {
-//         const { email, password } = req.body
-//         const existingUser = await User.findOne({ email, password }).exec()
-//         if (!existingUser) {
-//             res.status(400).send("User or Password Invalid")
-//             return;
-//         }
-
-//         res.json({ token: jwt.sign({ email }, process.env.SECRET, { expiresIn: "2h" }) })
-
-//     } catch (error) {
-//         console.log("Error: ", error)
-//         res.status(500).send(error)
-//     }
-// })
+require("dotenv").config();
 
 router.post("/getAvailableBookings", async (req, res) => {
   const { meetingDate, fromTime, toTime, numberOfParticipants } = req.body;
@@ -135,7 +118,7 @@ router.post("/bookingcommitRequest", verifyToken, async (req, res) => {
       service: "gmail",
       auth: {
         user: "binyamintech7@gmail.com",
-        pass: "bootcamp123",
+        pass: process.env.EMAIL_PASSWORD,
       },
     });
 
@@ -166,6 +149,7 @@ router.post("/bookingcommitRequest", verifyToken, async (req, res) => {
         "מצורף קישור ליומן גוגל" +
         os.EOL +
         url,
+      html: "<h2>  היי{{req.user.name}} </h2>"
     };
 
     transporter.sendMail(mailOptions, function (error, info) {
