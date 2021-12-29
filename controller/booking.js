@@ -135,7 +135,7 @@ router.post("/bookingcommitRequest", verifyToken, async (req, res) => {
       service: "gmail",
       auth: {
         user: "binyamintech7@gmail.com",
-        pass: "bootcamp123",
+        pass: process.env.EMAIL_PASSWORD,
       },
     });
 
