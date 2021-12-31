@@ -9,97 +9,131 @@ const jwt = require("jsonwebtoken");
 const axios = require("axios");
 var nodemailer = require("nodemailer");
 var os = require("os");
+const bcrypt = require('bcrypt');
 
 router.post("/register", async (req, res) => {
-    try {
-        const { phone, email, password, code } = req.body;
-        const last_phoneVerification = await phoneVerification
-            .findOne({ phone })
-            .sort({ timestamp: "descending" });
-        if (!last_phoneVerification || last_phoneVerification.code != code) {
-            return res.status(400).send("phone verification failed");
-        } else {
-            //  delete all phoneVerification with the same phone
-            phoneVerification
-                .deleteMany({ phone })
-                .then(function () {
-                    console.log(
-                        "auth - verifyPhoneCode delete all the same phone succed"
-                    ); // Success
-                })
-                .catch(function (error) {
-                    console.log(
-                        "auth - verifyPhoneCode delete all the same phone faile. error:",
-                        error
-                    ); // Failure
-                });
-        }
+    //שיניתי את הפונקציה הזו לבדוק עם סינון לא של נטפרי!!
+    console.log("in server register")
+    const { name, phone, email, password, code } = req.body;
+    let newUserToSave
+    const last_phoneVerification = await phoneVerification
+        .findOne({ phone })
+        .sort({ timestamp: "descending" });
+    if (!last_phoneVerification || last_phoneVerification.code != code)
+        return res.status(400).json({ errorText: "אימות טלפון נכשל" });
+    // return res.status(400).json({ text: "phone verification failed" });
 
-        if (email == null || password == null) {
-            res.status(400).send("email or password missing");
-            return res;
-        }
-        const minChars = 3;
-        if (password.length < minChars) {
-            res.status(400).send(`Password is less than ${minChars} characters`);
-            return res;
-        }
 
-        const existingUserByPhone = await User.findOne({ phone }).exec();
-        const existingUserByEmail = await User.findOne({ email }).exec();
-
-        if (existingUserByPhone && existingUserByPhone.isRegistered) {
-            //Check if user registered (subscribed and not subscribed)
-            res.status(400).send("User with this phone Already Exists");
-            return res;
-        }
-
-        if (existingUserByEmail && existingUserByPhone.isRegistered) {
-            return res.status(400).send("User with this e-mail already exists");
-        }
-        console.log("creating user", req.body);
-        const bcrypt = require('bcrypt');
-        const saltRounds = 10;
-        const myPlaintextPassword = 's0/\/\P4$$w0rD';
-        const someOtherPlaintextPassword = 'not_bacon';
-        let requestBody = req.body;
-        let newUserToSave = { ...requestBody, isRegistered: true };
-        // console.log("user before save", newUserToSave);
-        const newUser = await User.create(newUserToSave);
-        //jwt - Json web token  מצפין את הטלפון בתוקן
-        res.json({
-            token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "1h" }),
-        });
-        return res;
-    } catch (error) {
-        console.log("Error: ", error);
-        res.status(500).send(error);
+    else {
+        //  delete all phoneVerification with the same phone
+        phoneVerification
+            .deleteMany({ phone })
+            .then(function () {
+                console.log(
+                    "auth - verifyPhoneCode delete all the same phone succed"
+                ); // Success
+            })
+            .catch(function (error) {
+                console.log(
+                    "auth - verifyPhoneCode delete all the same phone faile. error:",
+                    error
+                ); // Failure
+            });
     }
+    const existingUserByPhone = await User.findOne({ phone }).exec();
+    const existingUserByEmail = await User.findOne({ email }).exec();
+    if (existingUserByPhone && existingUserByPhone.isRegistered)
+        //Check if user registered (subscribed and not subscribed)
+        return res.status(400).json({ errorText: "מספר טלפון זה קיים במערכת" });
+
+    if (existingUserByEmail && existingUserByPhone.isRegistered) {
+        return res.status(400).json({ errorText: " כתובת מייל זו קיימת במערכת " });
+    }
+    console.log("creating user", req.body)
+    bcrypt.hash(password, 10, (error, hash) => {
+        if (error)
+            return res.status(500).json({
+                error: error
+            })
+        newUserToSave =
+        {
+            name: name,
+            password: hush,
+            email: email,
+            phone: phone,
+            isRegistered: true
+        };
+    })
+    const newUser = await User.create(newUserToSave);
+    return res.json({
+        token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }),
+    });
 });
 
 router.post("/login", async (req, res) => {
-    console.log("login", req.body);
-    try {
-        const { email, password } = req.body;
-        const existingUser = await User.findOne({ email, password }).exec();
-        console.log("ex", existingUser);
-        if (!existingUser) {
-            res.status(400).send("User or Password Invalid");
-            return;
+    // try {
+    //     const { email, password } = req.body;
+    //     //שיניתי השוואה למוצפן
+    //     // let hush = bcrypt.hash(password, 10)
+    //     // const existingUser = await User.findOne({ email, hush }).exec();
+    //     const existingUser = await User.findOne({ email }).exec();
+    //     console.log("existingUser", existingUser);
+    //     if (!existingUser)
+    //         return res.status(400).send("User or Password Invalid");
+    //     if (!existingUser.isRegistered && existingUser.isSubscribed) {
+    //         console.log("status 455");
+    //         res.status(455).send("Subscribed but not registered -should sign up ");
+    //         return;
+    //     }
+    //     const { phone } = existingUser;
+    //     res.json({
+    //         token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }),
+    //     });
+    // } catch (error) {
+    //     console.log("Error: ", error);
+    //     res.status(500).send(error);
+    // }
+
+    User.find({ email }).then((users) => {
+
+        if (users.length === 0) {
+            return res.status(401).json({
+                message: 'אימות נכשל'
+            });
         }
-        if (!existingUser.isRegistered && existingUser.isSubscribed) {
-            console.log("status 455");
-            res.status(455).send("Subscribed but not registered -should sign up ");
-            return;
-        }
-        const { phone } = existingUser;
-        res.json({
-            token: jwt.sign({ phone }, process.env.SECRET, { expiresIn: "2h" }),
-        });
-    } catch (error) {
-        console.log("Error: ", error);
-        res.status(500).send(error);
-    }
+
+        const [user] = users;
+
+        bcrypt.compare(password, user.password, (error, result) => {
+            if (error) {
+                return res.status(401).json({
+                    message: 'אימות נכשל'
+                });
+            }
+
+            if (result) {
+                if (!user.isRegistered &&
+                    user.isSubscribed)
+                    return res.status(455).json({
+                        message: "ברכות! זוהית כמנוי,אנא הירשם תחילה "
+                    });
+                const [phone] = user
+                return res.status(200).json({
+                    token: jwt.sign({
+                        phone
+                    },
+                        process.env.SECRET,
+                        {
+                            expiresIn: "2h"
+                        })
+                })
+            }
+
+            res.status(401).json({
+                message: 'Auth failed'
+            });
+        })
+    })
 });
 
 router.get("/user", verifyToken, async (req, res) => {

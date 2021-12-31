@@ -1,9 +1,0 @@
-POST http://localhost:4000/auth/getAvailableBookings
-Content-Type: application/json
-
-{
-     "date":"15/08/2021",
-     "fromTime":"08:00",
-     "toTime":"10:00",
-     "numberOfParticipants":3
-}
