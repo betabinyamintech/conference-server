@@ -3,7 +3,7 @@ var router = express.Router();
 const User = require("../model/user");
 const Booking = require("../model/booking");
 const phoneVerification = require("../model/phoneVerification");
-const Subscribers = require("../model/subscribers");
+// const Subscribers = require("../model/subscribers");
 const { verifyToken } = require("../middleware/verifyToken");
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
@@ -132,12 +132,19 @@ router.post("/login", async (req, res) => {
 });
 
 router.get("/user", verifyToken, async (req, res) => {
-  const subscriber = await Subscribers.findOne({
+  const subscriber = await User.findOne({
     phone: req.user.phone,
+    isSubscribed: true,
   }).exec();
   console.log("subscriber", subscriber);
-  const subscription = subscriber ? { balance: subscriber.coinsBalance } : null;
-  const userDetails = { ...req.user, subscription: subscription };
+  const coinsBalance = subscriber
+    ? {
+        currentMonthBalance: subscriber.currentMonthBalance,
+        nextMonthBalance: subscriber.nextMonthBalance,
+        purchasedBalance: subscriber.purchasedBalance,
+      }
+    : null;
+  const userDetails = { ...req.user, coinsBalance };
   console.log("userDetails", userDetails);
   return res.json(userDetails);
 });
@@ -159,32 +166,101 @@ router.post("/bookingOfUserRequest", async (req, res) => {
 });
 
 router.post("/IfSubscriberPay", verifyToken, async (req, res) => {
+  let payedFromPurchased = 0;
+  let payedFromCurrentMonth = 0;
+  let payedFromNextMonth = 0;
+  let payedFromCreditcard = 0;
   const { bookingDetails } = req.body;
-  let subscriber = [];
+
+  let subscriber = {};
   let updateSubscriber;
-  const userDetails = await User.find({ _id: req.user._id });
-  console.log("userDetails", userDetails);
+  const userDetails = await User.findOne({ _id: req.user._id });
   if (userDetails) {
-    subscriber = await Subscribers.find({ phone: userDetails[0].phone });
-  } else return res.send("error. not found user", err);
-  if (subscriber.length != 0) {
-    console.log("no", subscriber);
-    if (bookingDetails.bookValue <= subscriber[0].coinsBalance) {
-      let coins = subscriber[0].coinsBalance - bookingDetails.bookValue;
-      updateSubscriber = await Subscribers.findOneAndUpdate(
-        { _id: subscriber[0]._id },
-        {
-          $set: { coinsBalance: coins },
-        },
-        {
-          new: true,
-        }
+    subscriber = await User.findOne({
+      phone: userDetails.phone,
+      isSubscribed: true,
+    });
+  } else return res.status(404).send("error. not found user");
+
+  if (subscriber) {
+    console.log(
+      "request month",
+      new Date(bookingDetails.meetingDate).getMonth()
+    );
+    console.log("next mmonth", new Date().getMonth() + 1);
+    //User recognized as subscribed
+    if (
+      new Date(bookingDetails.startTime).getMonth() === new Date().getMonth()
+    ) {
+      console.log("///////same month");
+      console.log(
+        "same month data",
+        new Date(bookingDetails.startTime).getMonth(),
+        new Date().getMonth()
       );
-      console.log("updateSubscriber", updateSubscriber);
-    } else return res.json("-1");
-    return res.json(updateSubscriber);
+      if (
+        bookingDetails.bookValue <=
+        subscriber.currentMonthBalance + subscriber.purchasedBalance
+      ) {
+        let diff =
+          subscriber.currentMonthBalance - Math.abs(bookingDetails.bookValue);
+        if (diff < 0) {
+          payedFromCurrentMonth = Math.abs(subscriber.currentMonthBalance);
+          subscriber.currentMonthBalance = 0;
+          subscriber.purchasedBalance -= Math.abs(diff);
+          payedFromPurchased = Math.abs(diff);
+        } else {
+          payedFromCurrentMonth = Math.abs(bookingDetails.bookValue);
+          subscriber.currentMonthBalance -= Math.abs(bookingDetails.bookValue);
+        }
+      }
+    }
+
+    if (
+      new Date(bookingDetails.startTime).getMonth() ===
+      new Date().getMonth() + 1
+    ) {
+      console.log("///////next month");
+
+      if (
+        bookingDetails.bookValue <=
+        subscriber.nextMonthBalance + subscriber.purchasedBalance
+      ) {
+        let diff =
+          subscriber.nextMonthBalance - Math.abs(bookingDetails.bookValue);
+        if (diff < 0) {
+          payedFromNextMonth = Math.abs(subscriber.nextMonthBalance);
+          subscriber.nextMonthBalance = 0;
+          subscriber.purchasedBalance -= Math.abs(diff);
+          payedFromPurchased = Math.abs(diff);
+        } else {
+          payedFromNextMonth = Math.abs(bookingDetails.bookValue);
+          subscriber.nextMonthBalance -= Math.abs(bookingDetails.bookValue);
+        }
+      }
+    }
+
+    updateSubscriber = await User.findOneAndUpdate(
+      { _id: subscriber._id },
+      {
+        $set: {
+          currentMonthBalance: subscriber.currentMonthBalance,
+          nextMonthBalance: subscriber.nextMonthBalance,
+          purchasedBalance: subscriber.purchasedBalance,
+        },
+      },
+      {
+        new: true,
+      }
+    );
+    return res.json({
+      updateSubscriber,
+      payedFromPurchased,
+      payedFromMonthly: payedFromCurrentMonth,
+      payedFromCreditcard,
+    });
   } else {
-    console.log("yes");
+    //User not recognized as subscribed
     return res.json("-1");
   }
 });
@@ -305,7 +381,7 @@ const Sms019 = {
 router.post("/resetPass", async (req, res) => {
   const email = req.body.email;
   console.log("email", email);
-  let userExist = await User.find({ email: email });
+  let userExist = await User.findOne({ email: email });
   if (userExist.length < 1) {
     console.log("userExist", userExist);
     return res.status(400).send("user is not exist");
@@ -314,7 +390,7 @@ router.post("/resetPass", async (req, res) => {
   let randomPassword = Math.random().toString(36).slice(-8);
   console.log("randomPassword", randomPassword);
   let newUser = await User.findByIdAndUpdate(
-    userExist[0]._id,
+    userExist._id,
     { password: randomPassword },
     { new: true }
   );
@@ -326,10 +402,10 @@ router.post("/resetPass", async (req, res) => {
       pass: "bootcamp123",
     },
   });
-
+  console.log("user in nodemailer", userExist);
   var mailOptions = {
     from: "binyamintech7@gmail.com",
-    to: userExist[0].email,
+    to: userExist.email,
     subject: "שכחת סיסמא?",
     text:
       "לא נורא " +

@@ -45,7 +45,13 @@ const userSchema = new Schema({
   monthlyCoins: {
     type: Number,
   },
-  purchasedCoins: {
+  currentMonthBalance: {
+    type: Number,
+  },
+  nextMonthBalance: {
+    type: Number,
+  },
+  purchasedBalance: {
     type: Number,
   },
 });

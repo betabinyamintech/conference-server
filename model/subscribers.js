@@ -1,22 +1,22 @@
-const mongoose = require('mongoose')
-const { Schema } = mongoose
-const subscribersSchema = new Schema({
-    name: {
-        type: String,
-        require: true
-    },
-    phone: {
-        type: String,
-        require: true,
-        unique: true
-    },
-    program: {
-        type: mongoose.Types.ObjectId,
-        ref: 'programs'
-    },
-   coinsBalance: {
-        type: Number
-    }
+// const mongoose = require('mongoose')
+// const { Schema } = mongoose
+// const subscribersSchema = new Schema({
+//     name: {
+//         type: String,
+//         require: true
+//     },
+//     phone: {
+//         type: String,
+//         require: true,
+//         unique: true
+//     },
+//     program: {
+//         type: mongoose.Types.ObjectId,
+//         ref: 'programs'
+//     },
+//    coinsBalance: {
+//         type: Number
+//     }
 
-})
-module.exports = mongoose.model('subscribers', subscribersSchema)
+// })
+// module.exports = mongoose.model('subscribers', subscribersSchema)
