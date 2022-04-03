@@ -195,7 +195,7 @@ const Sms019 = {
           <sms>
           <user>
           <username>חבלבנימין</username>
-          <password>Binyamin1234</password>
+          <password>Btech@2022</password>
           </user>
           <source>Clinic Team</source>
           <destinations>
@@ -217,7 +217,7 @@ const Sms019 = {
           <sms>
           <user>
           <username>חבלבנימין</username>
-          <password>Binyamin1234</password>
+          <password>Btech@2022</password>
           </user>
           <source>Clinic Team</source>
           <destinations>
